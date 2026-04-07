@@ -30,20 +30,23 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 export const app = express();
 const server = createServer(app);
 
+// Configure body parser with larger size limit for file uploads
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// OAuth callback under /api/oauth/callback
+registerOAuthRoutes(app);
+
+// tRPC API
+app.use(
+  "/api/trpc",
+  createExpressMiddleware({
+    router: appRouter,
+    createContext,
+  })
+);
+
 async function startServer() {
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  // OAuth callback under /api/oauth/callback
-  registerOAuthRoutes(app);
-  // tRPC API
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: appRouter,
-      createContext,
-    })
-  );
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
@@ -66,6 +69,12 @@ async function startServer() {
   }
 }
 
-startServer().catch(console.error);
+// In Vercel, we only want to set up the routes, not start the server
+if (process.env.NODE_ENV === "development" || !process.env.VERCEL) {
+  startServer().catch(console.error);
+} else {
+  // In production/Vercel, we still need to call serveStatic to handle front-end routes
+  serveStatic(app);
+}
 
 export default app;
