@@ -14,6 +14,7 @@ import Reports from "./pages/Reports";
 import Admin from "./pages/Admin";
 import Marketing from "./pages/Marketing";
 import Automation from "./pages/Automation";
+import Notes from "./pages/Notes";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
@@ -44,6 +45,7 @@ function Router() {
         <Route path={"/reports"} component={Reports} />
         <Route path={"/leads"} component={Leads} />
         <Route path={"/automation"} component={Automation} />
+        <Route path={"/notes"} component={Notes} />
         <Route path={"/admin"} component={Admin} />
         <Route path={"/404"} component={NotFound} />
         {/* Redirect root to dashboard */}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Menu, X, LogOut, Settings, Home, Users, TrendingUp, Mail, BarChart3, Wrench, Lock, Zap } from "lucide-react";
+import { Menu, X, LogOut, Settings, Home, Users, TrendingUp, Mail, BarChart3, Wrench, Lock, Zap, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -21,6 +21,7 @@ export default function Layout({ children }: LayoutProps) {
     { name: "Atendimento", path: "/support", icon: Wrench },
     { name: "Relatórios", path: "/reports", icon: BarChart3 },
     { name: "Automação", path: "/automation", icon: Zap },
+    { name: "Notas", path: "/notes", icon: FileText },
     { name: "Administração", path: "/admin", icon: Lock },
   ];
 
