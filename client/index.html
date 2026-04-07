@@ -17,11 +17,21 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script
-      defer
-      type="module"
-      src="%VITE_ANALYTICS_ENDPOINT%/umami"
-      data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"></script>
+    <script>
+      (function() {
+        const endpoint = "%VITE_ANALYTICS_ENDPOINT%";
+        const websiteId = "%VITE_ANALYTICS_WEBSITE_ID%";
+        // Only inject if both variables are defined and not the placeholder strings
+        if (endpoint && websiteId && !endpoint.startsWith('%') && !websiteId.startsWith('%')) {
+          const script = document.createElement('script');
+          script.defer = true;
+          script.type = 'module';
+          script.src = endpoint + '/umami';
+          script.setAttribute('data-website-id', websiteId);
+          document.head.appendChild(script);
+        }
+      })();
+    </script>
   </body>
 
 </html>
