@@ -14,6 +14,11 @@ export default function Notes() {
 
   useEffect(() => {
     async function fetchNotes() {
+      if (!supabase) {
+        console.warn("Supabase client not initialized.");
+        setLoading(false);
+        return;
+      }
       try {
         const { data, error } = await supabase.from("notes").select("*");
         if (error) throw error;
