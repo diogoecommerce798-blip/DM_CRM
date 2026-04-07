@@ -3,7 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
-import { defineConfig, type Plugin, type ViteDevServer } from "vite";
+import { defineConfig, loadEnv, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 // =============================================================================
@@ -150,38 +150,77 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+/**
+ * Vite plugin to handle optional analytics injection
+ * Removes the analytics script if environment variables are missing
+ */
+function vitePluginAnalytics(env: Record<string, string>): Plugin {
+  return {
+    name: "analytics-handler",
+    enforce: "pre",
+    transformIndexHtml(html) {
+      const endpoint = env.VITE_ANALYTICS_ENDPOINT;
+      const websiteId = env.VITE_ANALYTICS_WEBSITE_ID;
 
-export default defineConfig({
-  plugins,
-  resolve: {
-    alias: {
-      "@": path.resolve(import.meta.dirname, "client", "src"),
-      "@shared": path.resolve(import.meta.dirname, "shared"),
-      "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      if (!endpoint || !websiteId) {
+        // Remove the script tag if variables are missing to avoid build errors
+        // Matches the analytics script tag even with different whitespace or attribute order
+        return html.replace(
+          /<script\b[^>]*?src="%VITE_ANALYTICS_ENDPOINT%\/umami"[^>]*?><\/script>/gi,
+          "",
+        );
+      }
+
+      return html
+        .replace(/%VITE_ANALYTICS_ENDPOINT%/g, endpoint)
+        .replace(/%VITE_ANALYTICS_WEBSITE_ID%/g, websiteId);
     },
-  },
-  envDir: path.resolve(import.meta.dirname),
-  root: path.resolve(import.meta.dirname, "client"),
-  publicDir: path.resolve(import.meta.dirname, "client", "public"),
-  build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
-    emptyOutDir: true,
-  },
-  server: {
-    host: true,
-    allowedHosts: [
-      ".manuspre.computer",
-      ".manus.computer",
-      ".manus-asia.computer",
-      ".manuscomputer.ai",
-      ".manusvm.computer",
-      "localhost",
-      "127.0.0.1",
-    ],
-    fs: {
-      strict: true,
-      deny: ["**/.*"],
+  };
+}
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, path.resolve(import.meta.dirname), "");
+
+  const plugins = [
+    react(),
+    tailwindcss(),
+    jsxLocPlugin(),
+    vitePluginManusRuntime(),
+    vitePluginManusDebugCollector(),
+    vitePluginAnalytics(env),
+  ];
+
+  return {
+    plugins,
+    resolve: {
+      alias: {
+        "@": path.resolve(import.meta.dirname, "client", "src"),
+        "@shared": path.resolve(import.meta.dirname, "shared"),
+        "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      },
     },
-  },
+    envDir: path.resolve(import.meta.dirname),
+    root: path.resolve(import.meta.dirname, "client"),
+    publicDir: path.resolve(import.meta.dirname, "client", "public"),
+    build: {
+      outDir: path.resolve(import.meta.dirname, "dist/public"),
+      emptyOutDir: true,
+    },
+    server: {
+      host: true,
+      allowedHosts: [
+        ".manuspre.computer",
+        ".manus.computer",
+        ".manus-asia.computer",
+        ".manuscomputer.ai",
+        ".manusvm.computer",
+        "localhost",
+        "127.0.0.1",
+      ],
+      fs: {
+        strict: true,
+        deny: ["**/.*"],
+      },
+    },
+  };
 });
