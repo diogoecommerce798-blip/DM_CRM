@@ -44,7 +44,7 @@ app.use(
 
 // Global JSON error handler — must be defined AFTER all routes
 // Prevents Express from returning plain-text "A server error occurred"
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: any, _req: any, res: any, _next: any) => {
   console.error("[Express Error]", err);
   const status = err?.status ?? err?.statusCode ?? 500;
   const message = err?.message ?? "Internal server error";
