@@ -1,32 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL || import.meta.env.SUPABASE_URL;
+const supabaseUrl = 
+  import.meta.env.VITE_SUPABASE_URL || 
+  import.meta.env.NEXT_PUBLIC_SUPABASE_URL || 
+  "https://qxkcgttftkryhhjqqhkm.supabase.co";
+
 const supabaseAnonKey = 
   import.meta.env.VITE_SUPABASE_ANON_KEY || 
   import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
   import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || 
-  import.meta.env.SUPABASE_ANON_KEY;
+  "sb_publishable_1TUYX4HMN83vlKU4EHTIlg_6V9SVy3P";
 
-// Only initialize if we have a valid URL string that doesn't start with % (Vite placeholder)
+// Only initialize if we have a valid URL string
 const isValidUrl = (url: string | undefined) => {
-  if (!url || url === 'undefined') return false;
+  if (!url || url === 'undefined' || url.startsWith('%')) return false;
   try {
-    // Ensure the URL has a protocol for the constructor to succeed
     const urlToTest = url.startsWith('http') ? url : `https://${url}`;
     new URL(urlToTest);
     return true;
   } catch (e) {
-    console.error(`Invalid Supabase URL: ${url}`, e);
     return false;
   }
 };
 
-if (!isValidUrl(supabaseUrl) || !supabaseAnonKey || supabaseAnonKey === 'undefined') {
-  console.warn('Supabase credentials missing or invalid. Supabase features will be disabled.');
-  if (supabaseUrl) console.log(`Supabase URL: ${supabaseUrl}`);
-}
-
-// Create a proxy or a dummy client if credentials are missing to avoid crash
-export const supabase = (isValidUrl(supabaseUrl) && supabaseAnonKey && supabaseAnonKey !== 'undefined')
+export const supabase = (isValidUrl(supabaseUrl) && supabaseAnonKey)
   ? createClient(supabaseUrl.startsWith('http') ? supabaseUrl : `https://${supabaseUrl}`, supabaseAnonKey)
   : null;
