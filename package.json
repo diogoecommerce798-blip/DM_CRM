@@ -115,6 +115,8 @@
       "wouter@3.7.1": "patches/wouter@3.7.1.patch"
     },
     "overrides": {
+      "react": "19.2.1",
+      "react-dom": "19.2.1",
       "tailwindcss>nanoid": "3.3.7"
     }
   }

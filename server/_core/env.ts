@@ -1,10 +1,19 @@
+const getRequiredEnv = (key: string, fallback?: string): string => {
+  const value = process.env[key] || process.env[`VITE_${key}`] || fallback;
+  if (value === undefined) {
+    console.error(`[ENV] CRITICAL ERROR: Environment variable ${key} is missing!`);
+    return "";
+  }
+  return value;
+};
+
 export const ENV = {
-  appId: process.env.VITE_APP_ID || process.env.APP_ID || "",
-  cookieSecret: process.env.JWT_SECRET || "",
-  databaseUrl: process.env.DATABASE_URL || "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL || "",
-  ownerOpenId: process.env.OWNER_OPEN_ID || "",
+  appId: getRequiredEnv("APP_ID", ""),
+  cookieSecret: getRequiredEnv("JWT_SECRET", ""),
+  databaseUrl: getRequiredEnv("DATABASE_URL", ""),
+  oAuthServerUrl: getRequiredEnv("OAUTH_SERVER_URL", ""),
+  ownerOpenId: getRequiredEnv("OWNER_OPEN_ID", ""),
   isProduction: process.env.NODE_ENV === "production",
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL || "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY || "",
+  forgeApiUrl: getRequiredEnv("BUILT_IN_FORGE_API_URL", ""),
+  forgeApiKey: getRequiredEnv("BUILT_IN_FORGE_API_KEY", ""),
 };

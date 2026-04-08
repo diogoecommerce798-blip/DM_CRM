@@ -174,6 +174,21 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: path.resolve(import.meta.dirname, "dist"),
       emptyOutDir: false, // Don't empty so we keep esbuild server bundle
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes("node_modules")) {
+              if (id.includes("react")) return "vendor-react";
+              if (id.includes("lucide")) return "vendor-icons";
+              if (id.includes("@radix-ui")) return "vendor-ui";
+              if (id.includes("mermaid") || id.includes("dagre")) return "vendor-viz";
+              if (id.includes("recharts") || id.includes("d3")) return "vendor-charts";
+              return "vendor";
+            }
+          },
+        },
+      },
     },
     server: {
       host: true,
