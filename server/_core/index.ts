@@ -46,6 +46,15 @@ app.use(
   })
 );
 
+// Global JSON error handler — must be defined AFTER all routes
+// Prevents Express from returning plain-text "A server error occurred"
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("[Express Error]", err);
+  const status = err?.status ?? err?.statusCode ?? 500;
+  const message = err?.message ?? "Internal server error";
+  res.status(status).json({ error: message });
+});
+
 async function startServer() {
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {

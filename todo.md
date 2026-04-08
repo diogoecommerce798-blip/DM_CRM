@@ -1,4 +1,4 @@
-# DM CRM - TODO
+# DM° CRM - TODO
 
 ## Fase 1: Inicialização e Configuração Supabase
 - [x] Configurar variáveis de ambiente do Supabase
