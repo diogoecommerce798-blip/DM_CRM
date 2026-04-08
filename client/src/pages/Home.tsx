@@ -68,7 +68,7 @@ export default function Home() {
       </main>
 
       <footer className="text-center py-4 text-xs text-gray-400">
-        © {new Date().getFullYear()} Nexus CRM
+        © {new Date().getFullYear()} DM CRM
       </footer>
     </div>
   );
