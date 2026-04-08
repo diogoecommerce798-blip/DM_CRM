@@ -13,15 +13,15 @@ const getRequiredEnv = (key: string, fallback?: string): string => {
 };
 
 export const ENV = {
-  appId: getRequiredEnv("APP_ID", ""),
-  cookieSecret: getRequiredEnv("JWT_SECRET", ""),
-  databaseUrl: getRequiredEnv("DATABASE_URL", ""),
-  oAuthServerUrl: getRequiredEnv("OAUTH_SERVER_URL", ""),
-  ownerOpenId: getRequiredEnv("OWNER_OPEN_ID", ""),
+  appId: process.env.APP_ID || process.env.VITE_APP_ID || "",
+  cookieSecret: process.env.SUPABASE_JWT_SECRET || process.env.JWT_SECRET || "",
+  databaseUrl: process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING || process.env.SUPABASE_DB_URL || "",
+  oAuthServerUrl: process.env.OAUTH_SERVER_URL || "https://api.manus.ai",
+  ownerOpenId: process.env.OWNER_OPEN_ID || "",
   isProduction: process.env.NODE_ENV === "production",
-  forgeApiUrl: getRequiredEnv("BUILT_IN_FORGE_API_URL", ""),
-  forgeApiKey: getRequiredEnv("BUILT_IN_FORGE_API_KEY", ""),
-  supabaseUrl: getRequiredEnv("SUPABASE_URL", ""),
-  supabaseAnonKey: getRequiredEnv("SUPABASE_ANON_KEY", ""),
-  supabaseJwtSecret: getRequiredEnv("SUPABASE_JWT_SECRET", ""),
+  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL || "",
+  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY || "",
+  supabaseUrl: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://qxkcgttftkryhhjqqhkm.supabase.co",
+  supabaseAnonKey: process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "sb_publishable_1TUYX4HMN83vlKU4EHTIlg_6V9SVy3P",
+  supabaseJwtSecret: process.env.SUPABASE_JWT_SECRET || process.env.JWT_SECRET || "",
 };

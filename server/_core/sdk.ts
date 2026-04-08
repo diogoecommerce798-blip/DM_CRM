@@ -2,11 +2,11 @@ import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const.j
 import { ForbiddenError } from "../../shared/_core/errors.js";
 import axios, { type AxiosInstance } from "axios";
 import { parse as parseCookieHeader } from "cookie";
-import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema.js";
 import * as db from "../db.js";
 import { ENV } from "./env.js";
+import { supabase } from "./supabase.js";
 import type {
   ExchangeTokenRequest,
   ExchangeTokenResponse,
@@ -14,7 +14,7 @@ import type {
   GetUserInfoWithJwtRequest,
   GetUserInfoWithJwtResponse,
 } from "./types/manusTypes";
-// Utility function
+
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
 
@@ -110,11 +110,6 @@ class SDKServer {
     return first ? first.toLowerCase() : null;
   }
 
-  /**
-   * Exchange OAuth authorization code for access token
-   * @example
-   * const tokenResponse = await sdk.exchangeCodeForToken(code, state);
-   */
   async exchangeCodeForToken(
     code: string,
     state: string
@@ -122,11 +117,6 @@ class SDKServer {
     return this.oauthService.getTokenByCode(code, state);
   }
 
-  /**
-   * Get user information using access token
-   * @example
-   * const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
-   */
   async getUserInfo(accessToken: string): Promise<GetUserInfoResponse> {
     const data = await this.oauthService.getUserInfoByToken({
       accessToken,
@@ -156,11 +146,6 @@ class SDKServer {
     return new TextEncoder().encode(secret);
   }
 
-  /**
-   * Create a session token for a Manus user openId
-   * @example
-   * const sessionToken = await sdk.createSessionToken(userInfo.openId);
-   */
   async createSessionToken(
     openId: string,
     options: { expiresInMs?: number; name?: string } = {}
@@ -198,7 +183,6 @@ class SDKServer {
     cookieValue: string | undefined | null
   ): Promise<{ openId: string; appId: string; name: string } | null> {
     if (!cookieValue) {
-      console.warn("[Auth] Missing session cookie");
       return null;
     }
 
@@ -214,7 +198,6 @@ class SDKServer {
         !isNonEmptyString(appId) ||
         !isNonEmptyString(name)
       ) {
-        console.warn("[Auth] Session payload missing required fields");
         return null;
       }
 
@@ -224,7 +207,6 @@ class SDKServer {
         name,
       };
     } catch (error) {
-      console.warn("[Auth] Session verification failed", String(error));
       return null;
     }
   }
@@ -253,88 +235,64 @@ class SDKServer {
     } as GetUserInfoWithJwtResponse;
   }
 
-  private getSupabaseJwtSecret() {
-    return new TextEncoder().encode(ENV.supabaseJwtSecret);
-  }
-
-  async verifySupabaseSession(
-    token: string | undefined | null
-  ): Promise<{ openId: string; email?: string; name?: string } | null> {
-    if (!token) return null;
-
-    try {
-      const secretKey = this.getSupabaseJwtSecret();
-      const { payload } = await jwtVerify(token, secretKey, {
-        algorithms: ["HS256"],
-      });
-
-      // O campo 'sub' no Supabase JWT é o ID do usuário
-      const openId = payload.sub;
-      if (!isNonEmptyString(openId)) return null;
-
-      return {
-        openId,
-        email: payload.email as string,
-        name: (payload.user_metadata as any)?.full_name || (payload.user_metadata as any)?.name || "",
-      };
-    } catch (error) {
-      console.warn("[Auth] Supabase session verification failed", String(error));
-      return null;
-    }
-  }
-
   async authenticateRequest(req: any): Promise<User> {
-    let sessionInfo: { openId: string; appId?: string; name?: string; email?: string } | null = null;
-    
-    // Tenta primeiro o token do Supabase no cabeçalho Authorization
-    const authHeader = req.headers.authorization;
+    let token = "";
+    const authHeader = req.headers?.authorization;
     if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
-      sessionInfo = await this.verifySupabaseSession(token);
+      token = authHeader.substring(7);
+    } else {
+      const cookies = this.parseCookies(req.headers?.cookie);
+      token = cookies.get(COOKIE_NAME) || "";
     }
 
-    // Se não encontrou no Supabase, tenta o cookie legado do Manus
-    if (!sessionInfo) {
-      const cookies = this.parseCookies(req.headers.cookie);
-      const sessionCookie = cookies.get(COOKIE_NAME);
-      sessionInfo = await this.verifySession(sessionCookie);
+    if (!token) {
+      throw ForbiddenError("No session token found");
     }
 
-    if (!sessionInfo) {
-      throw ForbiddenError("Invalid session");
+    // 1. Tentar validar via Supabase (Recomendado)
+    try {
+      const { data: { user: sbUser }, error: sbError } = await supabase.auth.getUser(token);
+      
+      if (!sbError && sbUser) {
+        let user = await db.getUserByOpenId(sbUser.id);
+        
+        if (!user) {
+          await db.upsertUser({
+            openId: sbUser.id,
+            name: sbUser.user_metadata?.full_name || sbUser.user_metadata?.name || null,
+            email: sbUser.email ?? null,
+            loginMethod: "supabase",
+            lastSignedIn: new Date(),
+          });
+          user = await db.getUserByOpenId(sbUser.id);
+        }
+
+        if (user) {
+          await db.upsertUser({
+            openId: user.openId,
+            lastSignedIn: new Date(),
+          });
+          return user;
+        }
+      }
+    } catch (err) {
+      console.error("[Auth] Supabase validation error:", err);
     }
 
-    const openId = sessionInfo.openId;
-    const signedInAt = new Date();
-    let user = await db.getUserByOpenId(openId);
-
-    // Se o usuário não estiver no DB, cria um novo a partir das informações da sessão
-    if (!user) {
-      try {
+    // 2. Fallback para o sistema legado do Manus
+    const session = await this.verifySession(token);
+    if (session) {
+      const user = await db.getUserByOpenId(session.openId);
+      if (user) {
         await db.upsertUser({
-          openId: openId,
-          name: sessionInfo.name || null,
-          email: sessionInfo.email ?? null,
-          loginMethod: "supabase",
-          lastSignedIn: signedInAt,
+          openId: user.openId,
+          lastSignedIn: new Date(),
         });
-        user = await db.getUserByOpenId(openId);
-      } catch (error) {
-        console.error("[Auth] Failed to sync user:", error);
-        throw ForbiddenError("Failed to sync user info");
+        return user;
       }
     }
 
-    if (!user) {
-      throw ForbiddenError("User not found");
-    }
-
-    await db.upsertUser({
-      openId: user.openId,
-      lastSignedIn: signedInAt,
-    });
-
-    return user;
+    throw ForbiddenError("Invalid session");
   }
 }
 
