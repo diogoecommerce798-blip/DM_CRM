@@ -1,24 +1,40 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import {
+  integer,
+  pgEnum,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  varchar,
+} from "drizzle-orm/pg-core";
+
+// ==================== ENUMS ====================
+
+export const roleEnum = pgEnum("role_enum", ["user", "admin"]);
+export const boolStrEnum = pgEnum("bool_str_enum", ["true", "false"]);
 
 /**
  * Core user table backing auth flow.
  * Extend this file with additional tables as your product grows.
  * Columns use camelCase to match both database fields and generated types.
  */
-export const users = mysqlTable("users", {
+export const users = pgTable("users", {
   /**
    * Surrogate primary key. Auto-incremented numeric value managed by the database.
    * Use this for relations between tables.
    */
-  id: int("id").autoincrement().primaryKey(),
+  id: serial("id").primaryKey(),
   /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  role: roleEnum("role").default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
@@ -28,9 +44,9 @@ export type InsertUser = typeof users.$inferInsert;
 // ==================== CRM TABLES ====================
 
 // 1. CONTACTS & LEADS
-export const companies = mysqlTable("companies", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   name: text("name").notNull(),
   industry: varchar("industry", { length: 100 }),
   website: varchar("website", { length: 255 }),
@@ -41,19 +57,22 @@ export const companies = mysqlTable("companies", {
   country: varchar("country", { length: 100 }),
   zipCode: varchar("zipCode", { length: 20 }),
   annualRevenue: varchar("annualRevenue", { length: 50 }),
-  employees: int("employees"),
+  employees: integer("employees"),
   description: text("description"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
 
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = typeof companies.$inferInsert;
 
-export const contacts = mysqlTable("contacts", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  companyId: int("companyId"),
+export const contacts = pgTable("contacts", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  companyId: integer("companyId"),
   firstName: varchar("firstName", { length: 100 }).notNull(),
   lastName: varchar("lastName", { length: 100 }),
   email: varchar("email", { length: 320 }),
@@ -64,85 +83,97 @@ export const contacts = mysqlTable("contacts", {
   tags: text("tags"),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
 
 export type Contact = typeof contacts.$inferSelect;
 export type InsertContact = typeof contacts.$inferInsert;
 
-export const leads = mysqlTable("leads", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  contactId: int("contactId"),
-  companyId: int("companyId"),
+export const leads = pgTable("leads", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  contactId: integer("contactId"),
+  companyId: integer("companyId"),
   source: varchar("source", { length: 100 }),
   status: varchar("status", { length: 50 }).default("new"),
-  leadScore: int("leadScore").default(0),
+  leadScore: integer("leadScore").default(0),
   expectedValue: varchar("expectedValue", { length: 50 }),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
 
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = typeof leads.$inferInsert;
 
 // 2. PIPELINE & DEALS
-export const pipelines = mysqlTable("pipelines", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const pipelines = pgTable("pipelines", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  isDefault: mysqlEnum("isDefault", ["true", "false"]).default("false"),
+  isDefault: boolStrEnum("isDefault").default("false"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
 
 export type Pipeline = typeof pipelines.$inferSelect;
 export type InsertPipeline = typeof pipelines.$inferInsert;
 
-export const stages = mysqlTable("stages", {
-  id: int("id").autoincrement().primaryKey(),
-  pipelineId: int("pipelineId").notNull(),
+export const stages = pgTable("stages", {
+  id: serial("id").primaryKey(),
+  pipelineId: integer("pipelineId").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
-  order: int("order").notNull(),
-  probability: int("probability").default(0),
+  order: integer("order").notNull(),
+  probability: integer("probability").default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
 export type Stage = typeof stages.$inferSelect;
 export type InsertStage = typeof stages.$inferInsert;
 
-export const deals = mysqlTable("deals", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  stageId: int("stageId").notNull(),
-  contactId: int("contactId"),
-  companyId: int("companyId"),
+export const deals = pgTable("deals", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  stageId: integer("stageId").notNull(),
+  contactId: integer("contactId"),
+  companyId: integer("companyId"),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   value: varchar("value", { length: 50 }).notNull(),
-  probability: int("probability").default(0),
+  probability: integer("probability").default(0),
   expectedCloseDate: timestamp("expectedCloseDate"),
   closedDate: timestamp("closedDate"),
   status: varchar("status", { length: 50 }).default("open"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
 
 export type Deal = typeof deals.$inferSelect;
 export type InsertDeal = typeof deals.$inferInsert;
 
 // 3. INTERACTIONS & ACTIVITIES
-export const interactions = mysqlTable("interactions", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  contactId: int("contactId"),
-  dealId: int("dealId"),
+export const interactions = pgTable("interactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  contactId: integer("contactId"),
+  dealId: integer("dealId"),
   type: varchar("type", { length: 50 }).notNull(),
   subject: varchar("subject", { length: 255 }),
   description: text("description"),
-  duration: int("duration"),
+  duration: integer("duration"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -150,9 +181,9 @@ export type Interaction = typeof interactions.$inferSelect;
 export type InsertInteraction = typeof interactions.$inferInsert;
 
 // 4. MARKETING & CAMPAIGNS
-export const campaigns = mysqlTable("campaigns", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const campaigns = pgTable("campaigns", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   type: varchar("type", { length: 50 }).notNull(),
@@ -161,82 +192,97 @@ export const campaigns = mysqlTable("campaigns", {
   endDate: timestamp("endDate"),
   budget: varchar("budget", { length: 50 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
 
 export type Campaign = typeof campaigns.$inferSelect;
 export type InsertCampaign = typeof campaigns.$inferInsert;
 
 // 5. WORKFLOWS & AUTOMATION
-export const workflows = mysqlTable("workflows", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const workflows = pgTable("workflows", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  isActive: mysqlEnum("isActive", ["true", "false"]).default("true"),
+  isActive: boolStrEnum("isActive").default("true"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
 
 export type Workflow = typeof workflows.$inferSelect;
 export type InsertWorkflow = typeof workflows.$inferInsert;
 
 // 6. SUPPORT & TICKETS
-export const tickets = mysqlTable("tickets", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  contactId: int("contactId"),
-  companyId: int("companyId"),
+export const tickets = pgTable("tickets", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  contactId: integer("contactId"),
+  companyId: integer("companyId"),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   priority: varchar("priority", { length: 50 }).default("medium"),
   status: varchar("status", { length: 50 }).default("open"),
   category: varchar("category", { length: 100 }),
-  assignedTo: int("assignedTo"),
+  assignedTo: integer("assignedTo"),
   dueDate: timestamp("dueDate"),
   resolvedDate: timestamp("resolvedDate"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
 
 export type Ticket = typeof tickets.$inferSelect;
 export type InsertTicket = typeof tickets.$inferInsert;
 
 // 7. REPORTS & ANALYTICS
-export const reports = mysqlTable("reports", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const reports = pgTable("reports", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   type: varchar("type", { length: 50 }).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
 
 export type Report = typeof reports.$inferSelect;
 export type InsertReport = typeof reports.$inferInsert;
 
 // 8. PERMISSIONS & ROLES
-export const roles = mysqlTable("roles", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const roles = pgTable("roles", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
 
 export type Role = typeof roles.$inferSelect;
 export type InsertRole = typeof roles.$inferInsert;
 
 // 9. CUSTOM FIELDS
-export const customFields = mysqlTable("customFields", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
+export const customFields = pgTable("customFields", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
   entityType: varchar("entityType", { length: 50 }).notNull(),
   fieldName: varchar("fieldName", { length: 100 }).notNull(),
   fieldType: varchar("fieldType", { length: 50 }).notNull(),
-  isRequired: mysqlEnum("isRequired", ["true", "false"]).default("false"),
+  isRequired: boolStrEnum("isRequired").default("false"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

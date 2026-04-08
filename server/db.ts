@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "../drizzle/schema.js";
 import { ENV } from "./_core/env";
 import { eq } from "drizzle-orm";
@@ -14,8 +14,9 @@ export const getDb = async () => {
   }
 
   try {
-    const connection = await mysql.createConnection(ENV.databaseUrl);
-    dbInstance = drizzle(connection, { schema, mode: "default" });
+    // prepare: false is required for Supabase (PgBouncer in transaction mode)
+    const client = postgres(ENV.databaseUrl, { prepare: false });
+    dbInstance = drizzle(client, { schema });
     return dbInstance;
   } catch (error) {
     console.error("Failed to connect to the database:", error);
@@ -56,4 +57,3 @@ export async function getUserByOpenId(openId: string) {
     .limit(1);
   return result[0] ?? null;
 }
-
