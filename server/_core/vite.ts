@@ -1,12 +1,15 @@
-import express, { type Express } from "express";
+import express from "express";
 import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
-import { createServer as createViteServer } from "vite";
-import viteConfig from "../../vite.config.js";
 
 export async function setupVite(app: any, server: Server) {
+  // @ts-ignore
+  const { createServer: createViteServer } = await import("vite");
+  // @ts-ignore
+  const { default: viteConfig } = await import("../../vite.config.js");
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
