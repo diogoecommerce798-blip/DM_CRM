@@ -256,34 +256,74 @@ class SDKServer {
     } as GetUserInfoWithJwtResponse;
   }
 
-  async authenticateRequest(req: any): Promise<User> {
-    // Regular authentication flow
-    const cookies = this.parseCookies(req.headers.cookie);
-    const sessionCookie = cookies.get(COOKIE_NAME);
-    const session = await this.verifySession(sessionCookie);
+  private getSupabaseJwtSecret() {
+    return new TextEncoder().encode(ENV.supabaseJwtSecret);
+  }
 
-    if (!session) {
-      throw ForbiddenError("Invalid session cookie");
+  async verifySupabaseSession(
+    token: string | undefined | null
+  ): Promise<{ openId: string; email?: string; name?: string } | null> {
+    if (!token) return null;
+
+    try {
+      const secretKey = this.getSupabaseJwtSecret();
+      const { payload } = await jwtVerify(token, secretKey, {
+        algorithms: ["HS256"],
+      });
+
+      // O campo 'sub' no Supabase JWT é o ID do usuário
+      const openId = payload.sub;
+      if (!isNonEmptyString(openId)) return null;
+
+      return {
+        openId,
+        email: payload.email as string,
+        name: (payload.user_metadata as any)?.full_name || (payload.user_metadata as any)?.name || "",
+      };
+    } catch (error) {
+      console.warn("[Auth] Supabase session verification failed", String(error));
+      return null;
+    }
+  }
+
+  async authenticateRequest(req: any): Promise<User> {
+    let sessionInfo: { openId: string; appId?: string; name?: string; email?: string } | null = null;
+    
+    // Tenta primeiro o token do Supabase no cabeçalho Authorization
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      sessionInfo = await this.verifySupabaseSession(token);
     }
 
-    const sessionUserId = session.openId;
-    const signedInAt = new Date();
-    let user = await db.getUserByOpenId(sessionUserId);
+    // Se não encontrou no Supabase, tenta o cookie legado do Manus
+    if (!sessionInfo) {
+      const cookies = this.parseCookies(req.headers.cookie);
+      const sessionCookie = cookies.get(COOKIE_NAME);
+      sessionInfo = await this.verifySession(sessionCookie);
+    }
 
-    // If user not in DB, sync from OAuth server automatically
+    if (!sessionInfo) {
+      throw ForbiddenError("Invalid session");
+    }
+
+    const openId = sessionInfo.openId;
+    const signedInAt = new Date();
+    let user = await db.getUserByOpenId(openId);
+
+    // Se o usuário não estiver no DB, cria um novo a partir das informações da sessão
     if (!user) {
       try {
-        const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
         await db.upsertUser({
-          openId: userInfo.openId,
-          name: userInfo.name || null,
-          email: userInfo.email ?? null,
-          loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+          openId: openId,
+          name: sessionInfo.name || null,
+          email: sessionInfo.email ?? null,
+          loginMethod: "supabase",
           lastSignedIn: signedInAt,
         });
-        user = await db.getUserByOpenId(userInfo.openId);
+        user = await db.getUserByOpenId(openId);
       } catch (error) {
-        console.error("[Auth] Failed to sync user from OAuth:", error);
+        console.error("[Auth] Failed to sync user:", error);
         throw ForbiddenError("Failed to sync user info");
       }
     }

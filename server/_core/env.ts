@@ -21,4 +21,7 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: getRequiredEnv("BUILT_IN_FORGE_API_URL", ""),
   forgeApiKey: getRequiredEnv("BUILT_IN_FORGE_API_KEY", ""),
+  supabaseUrl: getRequiredEnv("SUPABASE_URL", ""),
+  supabaseAnonKey: getRequiredEnv("SUPABASE_ANON_KEY", ""),
+  supabaseJwtSecret: getRequiredEnv("SUPABASE_JWT_SECRET", ""),
 };
