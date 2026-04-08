@@ -177,7 +177,7 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
-          manualChunks(id) {
+          manualChunks(id: string) {
             if (id.includes("node_modules")) {
               if (id.includes("react")) return "vendor-react";
               if (id.includes("lucide")) return "vendor-icons";
