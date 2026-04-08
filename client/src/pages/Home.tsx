@@ -1,10 +1,37 @@
 import { Button } from "@/components/ui/button";
-import { getLoginUrl } from "@/const";
-import { Building2, BarChart3, Users, Target } from "lucide-react";
+import { Building2, BarChart3, Users, Target, LogIn } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useLocation } from "wouter";
+import { useEffect } from "react";
 
 export default function Home() {
-  const loginUrl = getLoginUrl();
-  const oauthMissing = loginUrl === "/auth-error";
+  const { isAuthenticated, loading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isAuthenticated && !loading) {
+      setLocation("/dashboard");
+    }
+  }, [isAuthenticated, loading, setLocation]);
+
+  const handleLogin = async () => {
+    if (!supabase) {
+      console.error("Supabase client not initialized");
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google', // Ou outro provedor configurado no Supabase
+      options: {
+        redirectTo: window.location.origin + '/dashboard',
+      }
+    });
+
+    if (error) {
+      console.error("Login error:", error.message);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
@@ -14,15 +41,10 @@ export default function Home() {
           <Building2 className="w-7 h-7 text-blue-600" />
           <span className="text-xl font-bold text-gray-900">DM° CRM</span>
         </div>
-        {!oauthMissing ? (
-          <a href={loginUrl}>
-            <Button variant="default" size="sm">Entrar</Button>
-          </a>
-        ) : (
-          <Button variant="outline" size="sm" disabled title="Configure VITE_OAUTH_PORTAL_URL e VITE_APP_ID no Vercel">
-            Login indisponível
-          </Button>
-        )}
+        <Button onClick={handleLogin} variant="default" size="sm" className="gap-2">
+          <LogIn className="w-4 h-4" />
+          Entrar
+        </Button>
       </header>
 
       {/* Hero */}
@@ -34,21 +56,15 @@ export default function Home() {
           <p className="text-lg text-gray-600">
             CRM completo com pipeline de vendas, gestão de contatos, campanhas de marketing e muito mais.
           </p>
-          {oauthMissing ? (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4 text-sm text-left">
-              <strong>Configuração pendente:</strong> As variáveis de ambiente OAuth não estão configuradas no Vercel.
-              <br />
-              Acesse <strong>Settings → Environment Variables</strong> e defina{" "}
-              <code className="bg-amber-100 px-1 rounded">VITE_OAUTH_PORTAL_URL</code> e{" "}
-              <code className="bg-amber-100 px-1 rounded">VITE_APP_ID</code>.
-            </div>
-          ) : (
-            <a href={loginUrl}>
-              <Button size="lg" className="mt-2">
-                Começar agora
-              </Button>
-            </a>
-          )}
+          <div className="flex flex-col items-center gap-4 mt-6">
+            <Button size="lg" onClick={handleLogin} className="gap-2 px-8 h-12 text-lg">
+              <LogIn className="w-5 h-5" />
+              Começar agora com Google
+            </Button>
+            <p className="text-sm text-gray-500">
+              Acesse sua conta usando o sistema seguro do Supabase.
+            </p>
+          </div>
         </div>
 
         {/* Features */}
