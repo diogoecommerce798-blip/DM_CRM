@@ -16,7 +16,7 @@ import Marketing from "./pages/Marketing";
 import Automation from "./pages/Automation";
 import Notes from "./pages/Notes";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 
 function Router() {
   const { isAuthenticated, loading } = useAuth();
@@ -48,6 +48,17 @@ function Router() {
         <Route path={"/notes"} component={Notes} />
         <Route path={"/admin"} component={Admin} />
         <Route path={"/404"} component={NotFound} />
+        <Route path={"/auth-error"} component={() => (
+          <div className="flex flex-col items-center justify-center h-screen gap-4 text-center px-6">
+            <AlertTriangle className="w-12 h-12 text-amber-500" />
+            <h1 className="text-2xl font-bold text-gray-900">Configuração OAuth ausente</h1>
+            <p className="text-gray-600 max-w-md">
+              As variáveis <code className="bg-gray-100 px-1 rounded">VITE_OAUTH_PORTAL_URL</code> e{" "}
+              <code className="bg-gray-100 px-1 rounded">VITE_APP_ID</code> não estão configuradas no Vercel.
+              Acesse <strong>Settings → Environment Variables</strong> para adicionar.
+            </p>
+          </div>
+        )} />
         {/* Redirect root to dashboard */}
         <Route path={"/"} component={() => <Dashboard />} />
         {/* Final fallback route */}
