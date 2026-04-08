@@ -12,7 +12,7 @@ export default function Home() {
       <header className="px-6 py-4 flex items-center justify-between bg-white/80 backdrop-blur border-b border-blue-100">
         <div className="flex items-center gap-2">
           <Building2 className="w-7 h-7 text-blue-600" />
-          <span className="text-xl font-bold text-gray-900">Nexus CRM</span>
+          <span className="text-xl font-bold text-gray-900">DM CRM</span>
         </div>
         {!oauthMissing ? (
           <a href={loginUrl}>
