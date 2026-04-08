@@ -1,5 +1,10 @@
 const getRequiredEnv = (key: string, fallback?: string): string => {
-  const value = process.env[key] || process.env[`VITE_${key}`] || fallback;
+  const value = 
+    process.env[key] || 
+    process.env[`VITE_${key}`] || 
+    process.env[`NEXT_PUBLIC_${key}`] || 
+    (key === "DATABASE_URL" ? process.env.POSTGRES_URL || process.env.POSTGRES_URL_NON_POOLING : undefined) ||
+    fallback;
   if (value === undefined) {
     console.error(`[ENV] CRITICAL ERROR: Environment variable ${key} is missing!`);
     return "";
