@@ -4,14 +4,34 @@ import * as schema from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { eq } from "drizzle-orm";
 
-if (!ENV.databaseUrl) {
-  throw new Error("DATABASE_URL is not set");
-}
+let dbInstance: any = null;
 
-const connection = await mysql.createConnection(ENV.databaseUrl);
-export const db = drizzle(connection, { schema, mode: "default" });
+export const getDb = async () => {
+  if (dbInstance) return dbInstance;
+
+  if (!ENV.databaseUrl) {
+    throw new Error("DATABASE_URL is not set");
+  }
+
+  try {
+    const connection = await mysql.createConnection(ENV.databaseUrl);
+    dbInstance = drizzle(connection, { schema, mode: "default" });
+    return dbInstance;
+  } catch (error) {
+    console.error("Failed to connect to the database:", error);
+    throw error;
+  }
+};
+
+// For backward compatibility, but use getDb() where possible
+export const db = new Proxy({} as any, {
+  get(target, prop) {
+    throw new Error(`Top-level 'db' is no longer supported. Use 'await getDb()' instead. Property accessed: ${String(prop)}`);
+  }
+});
 
 export async function upsertUser(user: Partial<schema.InsertUser> & { openId: string }) {
+  const db = await getDb();
   const existingUser = await getUserByOpenId(user.openId);
 
   if (existingUser) {
@@ -28,6 +48,7 @@ export async function upsertUser(user: Partial<schema.InsertUser> & { openId: st
 }
 
 export async function getUserByOpenId(openId: string) {
+  const db = await getDb();
   const result = await db
     .select()
     .from(schema.users)
@@ -35,3 +56,4 @@ export async function getUserByOpenId(openId: string) {
     .limit(1);
   return result[0] ?? null;
 }
+
