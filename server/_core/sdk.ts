@@ -282,7 +282,7 @@ class SDKServer {
     // 2. Fallback para o sistema legado do Manus
     const session = await this.verifySession(token);
     if (session) {
-      const user = await db.getUserByOpenId(session.openId);
+      let user = await db.getUserByOpenId(session.openId);
       if (user) {
         await db.upsertUser({
           openId: user.openId,

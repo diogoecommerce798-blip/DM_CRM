@@ -78,7 +78,7 @@ async function startServer() {
 if (process.env.NODE_ENV === "development" || !process.env.VERCEL) {
   startServer().catch(console.error);
 } else {
- // In production/Vercel, we still need to call serveStatic to handle front-end routes
+  // Always serve static files in production Vercel
   serveStatic(app);
 }
 

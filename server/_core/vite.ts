@@ -48,10 +48,8 @@ export async function setupVite(app: any, server: Server) {
 }
 
 export function serveStatic(app: any) {
-  const distPath =
-    process.env.NODE_ENV === "development"
-      ? path.resolve(import.meta.dirname, "../..", "dist")
-      : path.resolve(import.meta.dirname);
+  const distPath = path.resolve(process.cwd(), "dist");
+  
   if (!fs.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
@@ -67,6 +65,11 @@ export function serveStatic(app: any) {
     if (req.url.startsWith("/api")) {
       return next();
     }
-    res.sendFile(path.resolve(distPath, "index.html"));
+    const indexPath = path.resolve(distPath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      next();
+    }
   });
 }

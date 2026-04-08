@@ -25,11 +25,10 @@ export const getDb = async () => {
 };
 
 // For backward compatibility, but use getDb() where possible
-export const db = new Proxy({} as any, {
-  get(target, prop) {
-    throw new Error(`Top-level 'db' is no longer supported. Use 'await getDb()' instead. Property accessed: ${String(prop)}`);
-  }
-});
+export const db = {
+  getUserByOpenId: (openId: string) => getUserByOpenId(openId),
+  upsertUser: (user: any) => upsertUser(user),
+};
 
 export async function upsertUser(user: Partial<schema.InsertUser> & { openId: string }) {
   const db = await getDb();
