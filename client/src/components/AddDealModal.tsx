@@ -68,12 +68,25 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
 
   const [dealValue, setDealValue] = useState("4.455/56.000");
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleSave = () => {
+    if (!formData.title || formData.title.trim().length === 0) {
+      setErrors({ title: "O título do negócio é obrigatório" });
+      return;
+    }
     onSave(formData);
     onClose();
   };
@@ -131,14 +144,19 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Título</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Título <span className="text-red-500">*</span>
+                </label>
                 <Input
                   name="title"
                   placeholder="Digite o título..."
                   value={formData.title}
                   onChange={handleChange}
-                  className="w-full"
+                  className={`w-full ${errors.title ? "border-red-500" : ""}`}
                 />
+                {errors.title && (
+                  <p className="text-xs text-red-500 mt-1">{errors.title}</p>
+                )}
               </div>
 
               <div>
