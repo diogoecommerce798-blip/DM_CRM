@@ -311,41 +311,41 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
                       onChange={handleChange}
                     />
                     <select 
-                      name="phoneType"
-                      className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      value={formData.phoneType}
-                      onChange={handleChange}
-                    >
-                      <option>Comercial</option>
-                      <option>Celular</option>
-                      <option>Residencial</option>
-                    </select>
-                  </div>
-                </div>
+                  name="phoneType"
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  value={formData.phoneType}
+                  onChange={handleChange}
+                >
+                  <option value="Comercial">Comercial</option>
+                  <option value="Celular">Celular</option>
+                  <option value="Residencial">Residencial</option>
+                </select>
+              </div>
+            </div>
 
-                <button type="button" className="text-sm text-blue-600 hover:text-blue-700">+ Adicionar telefone</button>
+            <button type="button" className="text-sm text-blue-600 hover:text-blue-700">+ Adicionar telefone</button>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
-                  <div className="flex gap-2">
-                    <Input 
-                      name="email"
-                      placeholder="E-mail" 
-                      className="flex-1" 
-                      value={formData.email}
-                      onChange={handleChange}
-                    />
-                    <select 
-                      name="emailType"
-                      className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-                      value={formData.emailType}
-                      onChange={handleChange}
-                    >
-                      <option>Comercial</option>
-                      <option>Pessoal</option>
-                    </select>
-                  </div>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
+              <div className="flex gap-2">
+                <Input 
+                  name="email"
+                  placeholder="E-mail" 
+                  className="flex-1" 
+                  value={formData.email}
+                  onChange={handleChange}
+                />
+                <select 
+                  name="emailType"
+                  className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  value={formData.emailType}
+                  onChange={handleChange}
+                >
+                  <option value="Comercial">Comercial</option>
+                  <option value="Pessoal">Pessoal</option>
+                </select>
+              </div>
+            </div>
 
                 <button type="button" className="text-sm text-blue-600 hover:text-blue-700">+ Adicionar e-mail</button>
 
@@ -370,9 +370,9 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
                     value={formData.owner}
                     onChange={handleChange}
                   >
-                    <option>Fernando Mancuso (Você)</option>
-                    <option>João Silva</option>
-                    <option>Maria Santos</option>
+                    <option value="Fernando Mancuso (Você)">Fernando Mancuso (Você)</option>
+                    <option value="João Silva">João Silva</option>
+                    <option value="Maria Santos">Maria Santos</option>
                   </select>
                 </div>
 
@@ -384,10 +384,10 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
                     value={formData.potentialRating}
                     onChange={handleChange}
                   >
-                    <option>Selecionar...</option>
-                    <option>Alta</option>
-                    <option>Média</option>
-                    <option>Baixa</option>
+                    <option value="">Selecionar...</option>
+                    <option value="Alta">Alta</option>
+                    <option value="Média">Média</option>
+                    <option value="Baixa">Baixa</option>
                   </select>
                 </div>
 
@@ -410,10 +410,10 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
                     value={formData.companySize}
                     onChange={handleChange}
                   >
-                    <option>Selecionar...</option>
-                    <option>Pequena</option>
-                    <option>Média</option>
-                    <option>Grande</option>
+                    <option value="">Selecionar...</option>
+                    <option value="Pequena">Pequena</option>
+                    <option value="Média">Média</option>
+                    <option value="Grande">Grande</option>
                   </select>
                 </div>
 
@@ -425,10 +425,10 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
                     value={formData.registrationStatus}
                     onChange={handleChange}
                   >
-                    <option>Selecionar...</option>
-                    <option>Ativa</option>
-                    <option>Inativa</option>
-                    <option>Pendente</option>
+                    <option value="">Selecionar...</option>
+                    <option value="Ativa">Ativa</option>
+                    <option value="Inativa">Inativa</option>
+                    <option value="Pendente">Pendente</option>
                   </select>
                 </div>
 

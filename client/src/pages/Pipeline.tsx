@@ -165,8 +165,25 @@ export default function Pipeline() {
       updateDealMutation.mutate({
         id: editingDeal.id,
         title: formData.title,
-        value: String(formData.value),
-        probability: formData.probability,
+        value: String(formData.value || "0"),
+        probability: parseInt(formData.probability || "0"),
+        contactName: formData.contact,
+        companyName: formData.organization,
+        funnelId: formData.funnelId,
+        source: formData.origin,
+        visibility: formData.visibility,
+        tags: formData.tags,
+        phone: formData.phone,
+        phoneType: formData.phoneType,
+        email: formData.email,
+        emailType: formData.emailType,
+        address: formData.address,
+        potentialRating: formData.potentialRating,
+        openingDate: formData.openingDate,
+        companySize: formData.companySize,
+        registrationStatus: formData.registrationStatus,
+        cnpj: formData.cnpj,
+        complement: formData.complement,
       });
     } else {
       // Se não houver um estágio selecionado (clique no botão do topo), 
@@ -178,7 +195,24 @@ export default function Pipeline() {
         title: formData.title,
         value: String(formData.value || "0"),
         stageId: finalStageId,
-        probability: formData.probability,
+        probability: parseInt(formData.probability || "0"),
+        contactName: formData.contact,
+        companyName: formData.organization,
+        funnelId: formData.funnelId,
+        source: formData.origin,
+        visibility: formData.visibility,
+        tags: formData.tags,
+        phone: formData.phone,
+        phoneType: formData.phoneType,
+        email: formData.email,
+        emailType: formData.emailType,
+        address: formData.address,
+        potentialRating: formData.potentialRating,
+        openingDate: formData.openingDate,
+        companySize: formData.companySize,
+        registrationStatus: formData.registrationStatus,
+        cnpj: formData.cnpj,
+        complement: formData.complement,
       });
     }
     setIsModalOpen(false);
@@ -202,13 +236,32 @@ export default function Pipeline() {
   };
 
   const handleEditDeal = (deal: Deal) => {
+    // Buscar os dados completos do deal do cache ou do banco se necessário
+    // Por enquanto, usamos os dados que já temos no estado 'stages'
+    const fullDealData = dbDeals?.find((d: any) => d.id === deal.id);
+    
     setEditingDeal({
       id: deal.id,
       title: deal.title,
       value: deal.value,
       probability: deal.probability,
-      organization: deal.company,
       contact: deal.contact,
+      organization: deal.company,
+      funnelId: fullDealData?.funnelId,
+      origin: fullDealData?.source,
+      visibility: fullDealData?.visibility,
+      tags: fullDealData?.tags,
+      phone: fullDealData?.phone,
+      phoneType: fullDealData?.phoneType,
+      email: fullDealData?.email,
+      emailType: fullDealData?.emailType,
+      address: fullDealData?.address,
+      potentialRating: fullDealData?.potentialRating,
+      openingDate: fullDealData?.openingDate,
+      companySize: fullDealData?.companySize,
+      registrationStatus: fullDealData?.registrationStatus,
+      cnpj: fullDealData?.cnpj,
+      complement: fullDealData?.complement,
     });
     setIsModalOpen(true);
   };
