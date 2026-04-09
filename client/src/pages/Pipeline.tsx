@@ -45,6 +45,27 @@ export default function Pipeline() {
   const { data: dbStages, isLoading } = trpc.crm.listStages.useQuery();
   const { data: dbDeals } = trpc.crm.listDeals.useQuery();
 
+  const createDealMutation = trpc.crm.createDeal.useMutation({
+    onSuccess: () => {
+      utils.crm.listDeals.invalidate();
+      toast.success("Negócio criado!");
+    },
+  });
+
+  const updateDealMutation = trpc.crm.updateDeal.useMutation({
+    onSuccess: () => {
+      utils.crm.listDeals.invalidate();
+      toast.success("Negócio atualizado!");
+    },
+  });
+
+  const deleteDealMutation = trpc.crm.deleteDeal.useMutation({
+    onSuccess: () => {
+      utils.crm.listDeals.invalidate();
+      toast.success("Negócio excluído.");
+    },
+  });
+
   const [stages, setStages] = useState<Stage[]>([]);
 
   useEffect(() => {
@@ -67,20 +88,6 @@ export default function Pipeline() {
       setStages(formattedStages);
     }
   }, [dbStages, dbDeals]);
-
-  const createDealMutation = trpc.crm.createDeal.useMutation({
-    onSuccess: () => {
-      utils.crm.listDeals.invalidate();
-      toast.success("Negócio criado!");
-    },
-  });
-
-  const updateDealMutation = trpc.crm.updateDeal.useMutation({
-    onSuccess: () => {
-      utils.crm.listDeals.invalidate();
-      toast.success("Negócio atualizado!");
-    },
-  });
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -136,13 +143,6 @@ export default function Pipeline() {
       </div>
     );
   }
-
-  const deleteDealMutation = trpc.crm.deleteDeal.useMutation({
-    onSuccess: () => {
-      utils.crm.listDeals.invalidate();
-      toast.success("Negócio excluído.");
-    },
-  });
 
   const handleAddDeal = (stageId: string) => {
     if (stageId) {
