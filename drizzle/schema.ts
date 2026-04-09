@@ -59,6 +59,14 @@ export const companies = pgTable("companies", {
   annualRevenue: varchar("annualRevenue", { length: 50 }),
   employees: integer("employees"),
   description: text("description"),
+  cnpj: varchar("cnpj", { length: 20 }),
+  complement: text("complement"),
+  companySize: varchar("companySize", { length: 50 }),
+  registrationStatus: varchar("registrationStatus", { length: 50 }),
+  potentialRating: varchar("potentialRating", { length: 50 }),
+  openingDate: timestamp("openingDate"),
+  ownerId: integer("ownerId"),
+  tags: text("tags"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt")
     .defaultNow()
@@ -77,6 +85,8 @@ export const contacts = pgTable("contacts", {
   lastName: varchar("lastName", { length: 100 }),
   email: varchar("email", { length: 320 }),
   phone: varchar("phone", { length: 20 }),
+  emailWork: varchar("emailWork", { length: 320 }),
+  phoneWork: varchar("phoneWork", { length: 20 }),
   jobTitle: varchar("jobTitle", { length: 100 }),
   department: varchar("department", { length: 100 }),
   status: varchar("status", { length: 50 }).default("active"),
@@ -154,6 +164,11 @@ export const deals = pgTable("deals", {
   expectedCloseDate: timestamp("expectedCloseDate"),
   closedDate: timestamp("closedDate"),
   status: varchar("status", { length: 50 }).default("open"),
+  funnelId: integer("funnelId"),
+  tags: text("tags"),
+  source: varchar("source", { length: 100 }),
+  visibility: varchar("visibility", { length: 50 }).default("everyone"),
+  ownerId: integer("ownerId"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt")
     .defaultNow()
@@ -248,6 +263,22 @@ export const reports = pgTable("reports", {
   userId: integer("userId").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
+});
+
+export const notes = pgTable("notes", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  title: text("title").notNull(),
+  content: text("content"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export type Note = typeof notes.$inferSelect;
+export type InsertNote = typeof notes.$inferInsert;
   type: varchar("type", { length: 50 }).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt")
