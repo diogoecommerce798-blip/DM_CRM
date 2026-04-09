@@ -56,7 +56,8 @@ export default function DraggableDealCard({ deal, stageId, onEdit, onDelete }: D
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-blue-600"
+                className="h-7 w-7 text-blue-600 pointer-events-auto"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
                   onEdit(deal);
@@ -69,7 +70,8 @@ export default function DraggableDealCard({ deal, stageId, onEdit, onDelete }: D
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-red-600"
+                className="h-7 w-7 text-red-600 pointer-events-auto"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete(deal.id);
