@@ -100,6 +100,18 @@ export default function Pipeline() {
     },
   });
 
+  // Configurar sensores para permitir cliques em botões dentro de áreas arrastáveis
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Só começa a arrastar se mover 8 pixels
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   useEffect(() => {
     if (dbStages && dbDeals) {
       const formattedStages: Stage[] = dbStages.map((s: any) => ({
@@ -311,6 +323,7 @@ export default function Pipeline() {
 
       {/* Kanban Board with Drag and Drop */}
       <DndContext
+        sensors={sensors}
         collisionDetection={closestCorners}
         onDragEnd={handleDragEnd}
         onDragStart={(event) => {
