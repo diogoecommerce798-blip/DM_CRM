@@ -75,6 +75,50 @@ export const crmRouter = router({
     return await db.getDb().then(d => d.select().from(schema.stages));
   }),
 
+  createStage: publicProcedure
+    .input(z.object({
+      pipelineId: z.number(),
+      name: z.string().min(1),
+      order: z.number(),
+      probability: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const result = await db.getDb().then(d => 
+        d.insert(schema.stages).values(input).returning()
+      );
+      return result[0];
+    }),
+
+  updateStage: publicProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      order: z.number().optional(),
+      probability: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const { id, ...data } = input;
+      const result = await db.getDb().then(d => 
+        d.update(schema.stages)
+          .set(data)
+          .where(eq(schema.stages.id, id))
+          .returning()
+      );
+      return result[0];
+    }),
+
+  deleteStage: publicProcedure
+    .input(z.number())
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      await db.getDb().then(d => 
+        d.delete(schema.stages).where(eq(schema.stages.id, input))
+      );
+      return { success: true };
+    }),
+
   // NOTAS (NOTES)
   listNotes: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return [];
