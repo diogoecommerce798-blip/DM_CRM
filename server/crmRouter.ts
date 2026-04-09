@@ -70,6 +70,11 @@ export const crmRouter = router({
       return { success: true };
     }),
 
+  // ESTÁGIOS (STAGES)
+  listStages: publicProcedure.query(async () => {
+    return await db.getDb().then(d => d.select().from(schema.stages));
+  }),
+
   // NOTAS (NOTES)
   listNotes: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return [];
@@ -185,6 +190,86 @@ export const crmRouter = router({
           ...input,
           userId: ctx.user!.id,
         }).returning()
+      );
+      return result[0];
+    }),
+
+  updateContact: publicProcedure
+    .input(z.object({
+      id: z.number(),
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
+      email: z.string().email().optional(),
+      phone: z.string().optional(),
+      jobTitle: z.string().optional(),
+      department: z.string().optional(),
+      status: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const { id, ...data } = input;
+      const result = await db.getDb().then(d => 
+        d.update(schema.contacts)
+          .set({ ...data, updatedAt: new Date() })
+          .where(eq(schema.contacts.id, id))
+          .returning()
+      );
+      return result[0];
+    }),
+
+  deleteContact: publicProcedure
+    .input(z.number())
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      await db.getDb().then(d => 
+        d.delete(schema.contacts).where(eq(schema.contacts.id, input))
+      );
+      return { success: true };
+    }),
+
+  // PRODUTOS (PRODUCTS)
+  listProducts: publicProcedure.query(async () => {
+    return await db.getDb().then(d => d.select().from(schema.products));
+  }),
+
+  createProduct: publicProcedure
+    .input(z.object({
+      name: z.string().min(1),
+      code: z.string().min(1),
+      price: z.number(),
+      category: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const result = await db.getDb().then(d => 
+        d.insert(schema.products).values({
+          ...input,
+          price: String(input.price),
+        }).returning()
+      );
+      return result[0];
+    }),
+
+  // USUÁRIOS (USERS)
+  listUsers: publicProcedure.query(async () => {
+    return await db.getDb().then(d => d.select().from(schema.users));
+  }),
+
+  updateUser: publicProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      email: z.string().optional(),
+      role: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const { id, ...data } = input;
+      const result = await db.getDb().then(d => 
+        d.update(schema.users)
+          .set({ ...data, updatedAt: new Date() })
+          .where(eq(schema.users.id, id))
+          .returning()
       );
       return result[0];
     }),

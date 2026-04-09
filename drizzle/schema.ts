@@ -318,3 +318,20 @@ export const customFields = pgTable("customFields", {
 
 export type CustomField = typeof customFields.$inferSelect;
 export type InsertCustomField = typeof customFields.$inferInsert;
+
+// 10. PRODUTOS (PRODUCTS)
+export const products = pgTable("products", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 100 }).notNull().unique(),
+  price: varchar("price", { length: 50 }).notNull(),
+  category: varchar("category", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+});
+
+export type Product = typeof products.$inferSelect;
+export type InsertProduct = typeof products.$inferInsert;
