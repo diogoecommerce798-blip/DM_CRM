@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
+import Auth from "./pages/Auth";
 import Contacts from "./pages/Contacts";
 import Pipeline from "./pages/Pipeline";
 import Leads from "./pages/Leads";
@@ -30,7 +31,12 @@ function Router() {
   }
 
   if (!isAuthenticated) {
-    return <Home />;
+    return (
+      <Switch>
+        <Route path="/auth" component={Auth} />
+        <Route component={Home} />
+      </Switch>
+    );
   }
 
   // Authenticated routes with layout

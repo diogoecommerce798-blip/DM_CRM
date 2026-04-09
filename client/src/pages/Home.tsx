@@ -15,22 +15,8 @@ export default function Home() {
     }
   }, [isAuthenticated, loading, setLocation]);
 
-  const handleLogin = async () => {
-    if (!supabase) {
-      console.error("Supabase client not initialized");
-      return;
-    }
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google', // Ou outro provedor configurado no Supabase
-      options: {
-        redirectTo: window.location.origin + '/dashboard',
-      }
-    });
-
-    if (error) {
-      console.error("Login error:", error.message);
-    }
+  const handleLogin = () => {
+    setLocation("/auth");
   };
 
   return (
