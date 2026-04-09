@@ -263,7 +263,16 @@ export const reports = pgTable("reports", {
   userId: integer("userId").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
+  type: varchar("type", { length: 50 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt")
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
+
+export type Report = typeof reports.$inferSelect;
+export type InsertReport = typeof reports.$inferInsert;
 
 export const notes = pgTable("notes", {
   id: serial("id").primaryKey(),
@@ -279,16 +288,6 @@ export const notes = pgTable("notes", {
 
 export type Note = typeof notes.$inferSelect;
 export type InsertNote = typeof notes.$inferInsert;
-  type: varchar("type", { length: 50 }).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-});
-
-export type Report = typeof reports.$inferSelect;
-export type InsertReport = typeof reports.$inferInsert;
 
 // 8. PERMISSIONS & ROLES
 export const roles = pgTable("roles", {
