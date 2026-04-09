@@ -104,3 +104,4 @@ export default function DraggableDealCard({ deal, stageId, onEdit, onDelete }: D
       </CardContent>
     </Card>
   );
+}
