@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, DollarSign, TrendingUp, Loader2 } from "lucide-react";
+import { Plus, DollarSign, TrendingUp, Loader2, PlusCircle, X } from "lucide-react";
 import {
   DndContext,
   closestCorners,
@@ -13,6 +13,9 @@ import {
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import AddDealModal from "@/components/AddDealModal";
 import DroppableStage from "@/components/DroppableStage";
 import DraggableDealCard from "@/components/DraggableDealCard";
@@ -67,6 +70,35 @@ export default function Pipeline() {
   });
 
   const [stages, setStages] = useState<Stage[]>([]);
+  const [isStageModalOpen, setIsStageModalOpen] = useState(false);
+  const [editingStage, setEditingStage] = useState<Stage | null>(null);
+  const [newStageName, setNewStageName] = useState("");
+
+  const createStageMutation = trpc.crm.createStage.useMutation({
+    onSuccess: () => {
+      utils.crm.listStages.invalidate();
+      setIsStageModalOpen(false);
+      setNewStageName("");
+      toast.success("Coluna adicionada!");
+    },
+  });
+
+  const updateStageMutation = trpc.crm.updateStage.useMutation({
+    onSuccess: () => {
+      utils.crm.listStages.invalidate();
+      setIsStageModalOpen(false);
+      setEditingStage(null);
+      setNewStageName("");
+      toast.success("Coluna renomeada!");
+    },
+  });
+
+  const deleteStageMutation = trpc.crm.deleteStage.useMutation({
+    onSuccess: () => {
+      utils.crm.listStages.invalidate();
+      toast.success("Coluna removida!");
+    },
+  });
 
   useEffect(() => {
     if (dbStages && dbDeals) {
@@ -175,6 +207,35 @@ export default function Pipeline() {
     }
   };
 
+  const handleCreateStage = () => {
+    if (!newStageName.trim()) return;
+    createStageMutation.mutate({
+      pipelineId: 1, // Assumindo o pipeline padrão
+      name: newStageName,
+      order: stages.length + 1,
+    });
+  };
+
+  const handleUpdateStage = () => {
+    if (!editingStage || !newStageName.trim()) return;
+    updateStageMutation.mutate({
+      id: parseInt(editingStage.id),
+      name: newStageName,
+    });
+  };
+
+  const handleDeleteStage = (id: number) => {
+    if (window.confirm("Tem certeza que deseja remover esta coluna? Todos os negócios nela também serão afetados.")) {
+      deleteStageMutation.mutate(id);
+    }
+  };
+
+  const openEditStageModal = (stage: Stage) => {
+    setEditingStage(stage);
+    setNewStageName(stage.name);
+    setIsStageModalOpen(true);
+  };
+
   // Calcular totais
   const totalValue = stages.reduce((sum, stage) => {
     return sum + stage.deals.reduce((stageSum, deal) => stageSum + deal.value, 0);
@@ -256,7 +317,7 @@ export default function Pipeline() {
           setActiveDealId(String(event.active.id));
         }}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 overflow-x-auto pb-4 items-start">
           {stages.map((stage) => (
             <DroppableStage
               key={stage.id}
@@ -264,8 +325,23 @@ export default function Pipeline() {
               onAddDeal={handleAddDeal}
               onEditDeal={handleEditDeal}
               onDeleteDeal={handleDeleteDeal}
+              onEditStage={openEditStageModal}
+              onDeleteStage={handleDeleteStage}
             />
           ))}
+          
+          <Button
+            onClick={() => {
+              setEditingStage(null);
+              setNewStageName("");
+              setIsStageModalOpen(true);
+            }}
+            variant="ghost"
+            className="flex flex-col items-center justify-center min-h-[500px] border-2 border-dashed border-gray-200 rounded-lg text-gray-400 hover:text-blue-600 hover:border-blue-200 transition-all gap-2"
+          >
+            <PlusCircle size={32} />
+            <span className="font-medium">Nova Coluna</span>
+          </Button>
         </div>
 
         {/* Drag Overlay - mostra o card sendo arrastado */}
@@ -281,7 +357,7 @@ export default function Pipeline() {
         </DragOverlay>
       </DndContext>
 
-      {/* Modal */}
+      {/* Modal Negócio */}
       <AddDealModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -292,6 +368,32 @@ export default function Pipeline() {
         onSave={handleSaveDeal}
         initialData={editingDeal}
       />
+
+      {/* Modal Coluna (Stage) */}
+      <Dialog open={isStageModalOpen} onOpenChange={setIsStageModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{editingStage ? "Renomear Coluna" : "Nova Coluna"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Nome da Coluna</Label>
+              <Input
+                id="name"
+                value={newStageName}
+                onChange={(e) => setNewStageName(e.target.value)}
+                placeholder="Ex: Em Negociação"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsStageModalOpen(false)}>Cancelar</Button>
+            <Button onClick={editingStage ? handleUpdateStage : handleCreateStage}>
+              {editingStage ? "Salvar" : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
