@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, DollarSign, TrendingUp } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, DollarSign, TrendingUp, Loader2 } from "lucide-react";
 import {
   DndContext,
   closestCorners,
@@ -16,6 +16,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import AddDealModal from "@/components/AddDealModal";
 import DroppableStage from "@/components/DroppableStage";
 import DraggableDealCard from "@/components/DraggableDealCard";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 interface Deal {
   id: number;
@@ -34,86 +36,54 @@ interface Stage {
 }
 
 export default function Pipeline() {
+  const utils = trpc.useUtils();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStageForNewDeal, setSelectedStageForNewDeal] = useState<string | null>(null);
   const [activeDealId, setActiveDealId] = useState<string | null>(null);
+  const [editingDeal, setEditingDeal] = useState<any>(null);
 
-  // State para gerenciar os stages e deals
-  const [stages, setStages] = useState<Stage[]>([
-    {
-      id: "prospecting",
-      name: "Prospecção",
-      color: "bg-gray-100",
-      deals: [
-        { id: 1, title: "Contato Inicial", value: 15000, company: "Empresa A", contact: "João Silva", probability: 20 },
-        { id: 2, title: "Follow-up", value: 22000, company: "Empresa B", contact: "Maria Santos", probability: 20 },
-      ],
-    },
-    {
-      id: "qualification",
-      name: "Qualificação",
-      color: "bg-blue-50",
-      deals: [
-        { id: 3, title: "Reunião Agendada", value: 35000, company: "Empresa C", contact: "Carlos Oliveira", probability: 40 },
-      ],
-    },
-    {
-      id: "proposal",
-      name: "Proposta",
-      color: "bg-purple-50",
-      deals: [
-        { id: 4, title: "Proposta Enviada", value: 45000, company: "Empresa D", contact: "Ana Costa", probability: 60 },
-        { id: 5, title: "Apresentação", value: 28000, company: "Empresa E", contact: "Pedro Ferreira", probability: 60 },
-      ],
-    },
-    {
-      id: "negotiation",
-      name: "Negociação",
-      color: "bg-yellow-50",
-      deals: [
-        { id: 6, title: "Discussão de Preço", value: 52000, company: "Empresa F", contact: "Lucia Martins", probability: 80 },
-      ],
-    },
-    {
-      id: "closed",
-      name: "Fechado",
-      color: "bg-green-50",
-      deals: [
-        { id: 7, title: "Contrato Assinado", value: 65000, company: "Empresa G", contact: "Roberto Silva", probability: 100 },
-      ],
-    },
-  ]);
+  const { data: dbStages, isLoading } = trpc.crm.listStages.useQuery();
+  const { data: dbDeals } = trpc.crm.listDeals.useQuery();
 
-  // Configurar sensores para drag-and-drop
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const [stages, setStages] = useState<Stage[]>([]);
 
-  // Calcular totais
-  const totalValue = stages.reduce((sum, stage) => {
-    return sum + stage.deals.reduce((stageSum, deal) => stageSum + deal.value, 0);
-  }, 0);
-
-  const totalDeals = stages.reduce((sum, stage) => sum + stage.deals.length, 0);
-
-  // Encontrar um deal por ID
-  const findDealById = (dealId: string): { deal: Deal; stageId: string } | null => {
-    for (const stage of stages) {
-      const deal = stage.deals.find((d) => `${stage.id}-${d.id}` === dealId);
-      if (deal) {
-        return { deal, stageId: stage.id };
-      }
+  useEffect(() => {
+    if (dbStages && dbDeals) {
+      const formattedStages: Stage[] = dbStages.map((s: any) => ({
+        id: String(s.id),
+        name: s.name,
+        color: s.color || "bg-gray-100",
+        deals: dbDeals
+          .filter((d: any) => d.stageId === s.id)
+          .map((d: any) => ({
+            id: d.id,
+            title: d.title,
+            value: parseFloat(d.value) || 0,
+            company: d.companyName || "N/A",
+            contact: d.contactName || "N/A",
+            probability: d.probability || 0,
+          })),
+      }));
+      setStages(formattedStages);
     }
-    return null;
-  };
+  }, [dbStages, dbDeals]);
 
-  // Handle drag end
+  const createDealMutation = trpc.crm.createDeal.useMutation({
+    onSuccess: () => {
+      utils.crm.listDeals.invalidate();
+      toast.success("Negócio criado!");
+    },
+  });
+
+  const updateDealMutation = trpc.crm.updateDeal.useMutation({
+    onSuccess: () => {
+      utils.crm.listDeals.invalidate();
+      toast.success("Negócio atualizado!");
+    },
+  });
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-
     if (!over) {
       setActiveDealId(null);
       return;
@@ -121,124 +91,91 @@ export default function Pipeline() {
 
     const activeId = String(active.id);
     const overId = String(over.id);
-
     setActiveDealId(null);
 
-    // Se o item foi solto em um estágio vazio
-    if (typeof overId === "string" && !overId.includes("-")) {
-      const activeDeal = findDealById(activeId);
-      if (activeDeal) {
-        const { deal, stageId: oldStageId } = activeDeal;
-
-        if (oldStageId !== overId) {
-          // Remover do estágio antigo
-          setStages((prevStages) =>
-            prevStages.map((stage) =>
-              stage.id === oldStageId
-                ? { ...stage, deals: stage.deals.filter((d) => d.id !== deal.id) }
-                : stage
-            )
-          );
-
-          // Adicionar ao novo estágio
-          setStages((prevStages) =>
-            prevStages.map((stage) =>
-              stage.id === overId ? { ...stage, deals: [...stage.deals, deal] } : stage
-            )
-          );
-        }
-      }
-      return;
+    const activeDealParts = activeId.split("-");
+    const dealId = parseInt(activeDealParts[activeDealParts.length - 1]);
+    
+    let newStageId: number | null = null;
+    if (overId.includes("-")) {
+      const overParts = overId.split("-");
+      newStageId = parseInt(overParts[0]);
+    } else {
+      newStageId = parseInt(overId);
     }
 
-    // Se o item foi solto em outro item
-    const activeData = active.data.current;
-    const overData = over.data.current;
-
-    if (activeData?.type === "Deal" && overData?.type === "Deal") {
-      const activeDeal = findDealById(activeId);
-      const overDeal = findDealById(overId);
-
-      if (activeDeal && overDeal) {
-        const { deal: activeDealData, stageId: activeStageId } = activeDeal;
-        const { stageId: overStageId } = overDeal;
-
-        if (activeStageId === overStageId) {
-          // Reordenar dentro do mesmo estágio
-          setStages((prevStages) =>
-            prevStages.map((stage) => {
-              if (stage.id === activeStageId) {
-                const oldIndex = stage.deals.findIndex((d) => d.id === activeDealData.id);
-                const newIndex = stage.deals.findIndex((d) => d.id === overDeal.deal.id);
-                return {
-                  ...stage,
-                  deals: arrayMove(stage.deals, oldIndex, newIndex),
-                };
-              }
-              return stage;
-            })
-          );
-        } else {
-          // Mover para outro estágio
-          setStages((prevStages) =>
-            prevStages.map((stage) => {
-              if (stage.id === activeStageId) {
-                return {
-                  ...stage,
-                  deals: stage.deals.filter((d) => d.id !== activeDealData.id),
-                };
-              }
-              if (stage.id === overStageId) {
-                const newIndex = stage.deals.findIndex((d) => d.id === overDeal.deal.id);
-                return {
-                  ...stage,
-                  deals: [
-                    ...stage.deals.slice(0, newIndex + 1),
-                    activeDealData,
-                    ...stage.deals.slice(newIndex + 1),
-                  ],
-                };
-              }
-              return stage;
-            })
-          );
-        }
-      }
+    if (!isNaN(dealId) && !isNaN(newStageId)) {
+      updateDealMutation.mutate({ id: dealId, stageId: newStageId });
     }
   };
+
+  const handleSaveDeal = (formData: any) => {
+    if (editingDeal) {
+      updateDealMutation.mutate({
+        id: editingDeal.id,
+        title: formData.title,
+        value: String(formData.value),
+        probability: formData.probability,
+      });
+    } else {
+      createDealMutation.mutate({
+        title: formData.title,
+        value: String(formData.value || "0"),
+        stageId: parseInt(selectedStageForNewDeal || "0"),
+        probability: formData.probability,
+      });
+    }
+    setIsModalOpen(false);
+    setEditingDeal(null);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+      </div>
+    );
+  }
+
+  const deleteDealMutation = trpc.crm.deleteDeal.useMutation({
+    onSuccess: () => {
+      utils.crm.listDeals.invalidate();
+      toast.success("Negócio excluído.");
+    },
+  });
 
   const handleAddDeal = (stageId: string) => {
     if (stageId) {
       setSelectedStageForNewDeal(stageId);
+      setEditingDeal(null);
       setIsModalOpen(true);
     }
   };
 
-  const handleSaveDeal = (deal: any) => {
-    const stageId = selectedStageForNewDeal || "prospecting";
-    const newDeal: Deal = {
-      id: Math.max(...stages.flatMap((s) => s.deals.map((d) => d.id)), 0) + 1,
-      title: deal.title || "Novo Negócio",
-      value: parseInt(deal.value) || 0,
-      company: deal.organization || "N/A",
-      contact: deal.contact || "N/A",
-      probability: parseInt(deal.probability) || 0,
-    };
-
-    setStages((prevStages) =>
-      prevStages.map((stage) =>
-        stage.id === stageId
-          ? { ...stage, deals: [...stage.deals, newDeal] }
-          : stage
-      )
-    );
-    setIsModalOpen(false);
-    setSelectedStageForNewDeal(null);
+  const handleEditDeal = (deal: Deal) => {
+    setEditingDeal({
+      id: deal.id,
+      title: deal.title,
+      value: deal.value,
+      probability: deal.probability,
+      organization: deal.company,
+      contact: deal.contact,
+    });
+    setIsModalOpen(true);
   };
 
-  // Encontrar o deal que está sendo arrastado para mostrar no overlay
-  const activeDeal = activeDealId ? findDealById(activeDealId) : null;
-  const activeDealData = activeDeal?.deal;
+  const handleDeleteDeal = (id: number) => {
+    if (window.confirm("Tem certeza que deseja excluir este negócio?")) {
+      deleteDealMutation.mutate(id);
+    }
+  };
+
+  // Calcular totais
+  const totalValue = stages.reduce((sum, stage) => {
+    return sum + stage.deals.reduce((stageSum, deal) => stageSum + deal.value, 0);
+  }, 0);
+
+  const totalDeals = stages.reduce((sum, stage) => sum + stage.deals.length, 0);
 
   return (
     <div className="space-y-6">
@@ -248,7 +185,10 @@ export default function Pipeline() {
           <h2 className="text-3xl font-bold text-gray-900">Pipeline de Vendas</h2>
           <p className="text-gray-500 mt-1">Gerencie suas oportunidades - Arraste os cards para mover entre estágios</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button onClick={() => {
+          setEditingDeal(null);
+          setIsModalOpen(true);
+        }} className="bg-blue-600 hover:bg-blue-700 text-white">
           <Plus size={20} className="mr-2" />
           Nova Oportunidade
         </Button>
@@ -292,7 +232,7 @@ export default function Pipeline() {
               <div>
                 <p className="text-sm text-gray-600">Valor Médio</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
-                  R$ {(totalValue / totalDeals / 1000).toFixed(1)}k
+                  R$ {totalDeals > 0 ? (totalValue / totalDeals / 1000).toFixed(1) : "0"}k
                 </p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
@@ -305,7 +245,6 @@ export default function Pipeline() {
 
       {/* Kanban Board with Drag and Drop */}
       <DndContext
-        sensors={sensors}
         collisionDetection={closestCorners}
         onDragEnd={handleDragEnd}
         onDragStart={(event) => {
@@ -318,15 +257,22 @@ export default function Pipeline() {
               key={stage.id}
               stage={stage}
               onAddDeal={handleAddDeal}
+              onEditDeal={handleEditDeal}
+              onDeleteDeal={handleDeleteDeal}
             />
           ))}
         </div>
 
         {/* Drag Overlay - mostra o card sendo arrastado */}
         <DragOverlay>
-          {activeDealData && activeDeal && (
-          <DraggableDealCard deal={activeDealData} stageId={activeDeal.stageId} />
-        )}
+          {activeDealId && (
+            <div className="opacity-80">
+              <DraggableDealCard 
+                deal={stages.flatMap(s => s.deals).find(d => String(d.id) === activeDealId.split("-").pop())!} 
+                stageId={activeDealId.split("-")[0]} 
+              />
+            </div>
+          )}
         </DragOverlay>
       </DndContext>
 
@@ -336,12 +282,10 @@ export default function Pipeline() {
         onClose={() => {
           setIsModalOpen(false);
           setSelectedStageForNewDeal(null);
+          setEditingDeal(null);
         }}
-        onSave={(deal) => {
-          if (selectedStageForNewDeal) {
-            handleSaveDeal(deal);
-          }
-        }}
+        onSave={handleSaveDeal}
+        initialData={editingDeal}
       />
     </div>
   );

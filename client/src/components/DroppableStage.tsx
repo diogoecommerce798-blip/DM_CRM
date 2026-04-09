@@ -23,9 +23,11 @@ interface Stage {
 interface DroppableStageProps {
   stage: Stage;
   onAddDeal: (stageId: string) => void;
+  onEditDeal?: (deal: Deal) => void;
+  onDeleteDeal?: (id: number) => void;
 }
 
-export default function DroppableStage({ stage, onAddDeal }: DroppableStageProps) {
+export default function DroppableStage({ stage, onAddDeal, onEditDeal, onDeleteDeal }: DroppableStageProps) {
   const { setNodeRef } = useDroppable({
     id: stage.id,
     data: {
@@ -51,7 +53,13 @@ export default function DroppableStage({ stage, onAddDeal }: DroppableStageProps
           className={`${stage.color} rounded-lg p-4 space-y-3 flex-1 min-h-[500px] overflow-y-auto`}
         >
           {stage.deals.map((deal) => (
-            <DraggableDealCard key={deal.id} deal={deal} stageId={stage.id} />
+            <DraggableDealCard 
+              key={deal.id} 
+              deal={deal} 
+              stageId={stage.id} 
+              onEdit={onEditDeal}
+              onDelete={onDeleteDeal}
+            />
           ))}
 
           <Button

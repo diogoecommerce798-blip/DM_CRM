@@ -1,74 +1,82 @@
 import { useState } from "react";
-import { Plus, Search, Filter, Edit2, Trash2, Mail, Phone, Building2 } from "lucide-react";
+import { Plus, Search, Filter, Edit2, Trash2, Mail, Phone, Building2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-
-interface Contact {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  jobTitle: string;
-  company: string;
-  status: "active" | "inactive";
-  createdAt: string;
-}
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import AddContactModal from "@/components/AddContactModal";
 
 export default function Contacts() {
+  const utils = trpc.useUtils();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
-  const [showForm, setShowForm] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<any>(null);
 
-  // Mock data - será substituído por dados reais
-  const mockContacts: Contact[] = [
-    {
-      id: 1,
-      firstName: "João",
-      lastName: "Silva",
-      email: "joao.silva@empresa.com",
-      phone: "(11) 98765-4321",
-      jobTitle: "Gerente de Vendas",
-      company: "Empresa ABC",
-      status: "active",
-      createdAt: "2026-03-15",
-    },
-    {
-      id: 2,
-      firstName: "Maria",
-      lastName: "Santos",
-      email: "maria.santos@empresa.com",
-      phone: "(11) 98765-4322",
-      jobTitle: "Diretora Financeira",
-      company: "Empresa XYZ",
-      status: "active",
-      createdAt: "2026-03-10",
-    },
-    {
-      id: 3,
-      firstName: "Carlos",
-      lastName: "Oliveira",
-      email: "carlos.oliveira@empresa.com",
-      phone: "(11) 98765-4323",
-      jobTitle: "Analista de TI",
-      company: "Empresa 123",
-      status: "inactive",
-      createdAt: "2026-02-28",
-    },
-  ];
+  const { data: contacts, isLoading } = trpc.crm.listContacts.useQuery();
 
-  const filteredContacts = mockContacts.filter((contact) => {
+  const createMutation = trpc.crm.createContact.useMutation({
+    onSuccess: () => {
+      utils.crm.listContacts.invalidate();
+      setIsModalOpen(false);
+      toast.success("Contato criado com sucesso!");
+    },
+    onError: (error) => {
+      toast.error(`Erro ao criar contato: ${error.message}`);
+    },
+  });
+
+  const updateMutation = trpc.crm.updateContact.useMutation({
+    onSuccess: () => {
+      utils.crm.listContacts.invalidate();
+      setEditingContact(null);
+      setIsModalOpen(false);
+      toast.success("Contato atualizado!");
+    },
+    onError: (error) => {
+      toast.error(`Erro ao atualizar contato: ${error.message}`);
+    },
+  });
+
+  const deleteMutation = trpc.crm.deleteContact.useMutation({
+    onSuccess: () => {
+      utils.crm.listContacts.invalidate();
+      toast.success("Contato excluído.");
+    },
+    onError: (error) => {
+      toast.error(`Erro ao excluir contato: ${error.message}`);
+    },
+  });
+
+  const handleSave = (formData: any) => {
+    if (editingContact) {
+      updateMutation.mutate({ ...formData, id: editingContact.id });
+    } else {
+      createMutation.mutate(formData);
+    }
+  };
+
+  const filteredContacts = (contacts || []).filter((contact) => {
+    const fullName = `${contact.firstName} ${contact.lastName || ""}`.toLowerCase();
     const matchesSearch =
-      contact.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.company.toLowerCase().includes(searchTerm.toLowerCase());
+      fullName.includes(searchTerm.toLowerCase()) ||
+      contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contact.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus = filterStatus === "all" || contact.status === filterStatus;
+    const matchesStatus =
+      filterStatus === "all" || contact.status === filterStatus;
 
     return matchesSearch && matchesStatus;
   });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -78,8 +86,11 @@ export default function Contacts() {
           <h2 className="text-3xl font-bold text-gray-900">Contatos</h2>
           <p className="text-gray-500 mt-1">Gerencie todos os seus contatos</p>
         </div>
-        <Button
-          onClick={() => setShowForm(!showForm)}
+        <Button 
+          onClick={() => {
+            setEditingContact(null);
+            setIsModalOpen(true);
+          }} 
           className="bg-blue-600 hover:bg-blue-700 text-white"
         >
           <Plus size={20} className="mr-2" />
@@ -87,37 +98,41 @@ export default function Contacts() {
         </Button>
       </div>
 
-      {/* Search and Filter */}
+      {/* Filters and Search */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex gap-4 flex-col md:flex-row">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <Input
-                placeholder="Buscar por nome, email ou empresa..."
+                placeholder="Buscar por nome, email ou cargo..."
+                className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Button
                 variant={filterStatus === "all" ? "default" : "outline"}
+                size="sm"
                 onClick={() => setFilterStatus("all")}
-                className="flex items-center gap-2"
+                className={filterStatus === "all" ? "bg-blue-600 hover:bg-blue-700" : ""}
               >
-                <Filter size={16} />
                 Todos
               </Button>
               <Button
                 variant={filterStatus === "active" ? "default" : "outline"}
+                size="sm"
                 onClick={() => setFilterStatus("active")}
+                className={filterStatus === "active" ? "bg-blue-600 hover:bg-blue-700" : ""}
               >
                 Ativos
               </Button>
               <Button
                 variant={filterStatus === "inactive" ? "default" : "outline"}
+                size="sm"
                 onClick={() => setFilterStatus("inactive")}
+                className={filterStatus === "inactive" ? "bg-blue-600 hover:bg-blue-700" : ""}
               >
                 Inativos
               </Button>
@@ -129,7 +144,7 @@ export default function Contacts() {
       {/* Contacts List */}
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Contatos</CardTitle>
+          <CardTitle className="text-lg">Lista de Contatos</CardTitle>
           <CardDescription>{filteredContacts.length} contatos encontrados</CardDescription>
         </CardHeader>
         <CardContent>
@@ -141,7 +156,6 @@ export default function Contacts() {
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Telefone</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Cargo</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Empresa</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Ações</th>
                 </tr>
@@ -160,22 +174,16 @@ export default function Contacts() {
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2 text-gray-600">
                         <Mail size={16} className="text-gray-400" />
-                        {contact.email}
+                        {contact.email || "-"}
                       </div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2 text-gray-600">
                         <Phone size={16} className="text-gray-400" />
-                        {contact.phone}
+                        {contact.phone || "-"}
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-gray-600">{contact.jobTitle}</td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Building2 size={16} className="text-gray-400" />
-                        {contact.company}
-                      </div>
-                    </td>
+                    <td className="py-3 px-4 text-gray-600">{contact.jobTitle || "-"}</td>
                     <td className="py-3 px-4">
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -189,10 +197,27 @@ export default function Contacts() {
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-blue-600 hover:text-blue-700"
+                          onClick={() => {
+                            setEditingContact(contact);
+                            setIsModalOpen(true);
+                          }}
+                        >
                           <Edit2 size={16} />
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => {
+                            if (window.confirm("Tem certeza que deseja excluir este contato?")) {
+                              deleteMutation.mutate(contact.id);
+                            }
+                          }}
+                        >
                           <Trash2 size={16} />
                         </Button>
                       </div>
@@ -210,6 +235,17 @@ export default function Contacts() {
           )}
         </CardContent>
       </Card>
+
+      <AddContactModal 
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingContact(null);
+        }}
+        onSave={handleSave}
+        contact={editingContact}
+        isEditing={!!editingContact}
+      />
     </div>
   );
 }

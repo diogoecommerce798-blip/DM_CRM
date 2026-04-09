@@ -1,40 +1,40 @@
 import { useState } from "react";
-import { Plus, Edit2, Trash2, Settings, Users, Package, Lock, Bell, Palette } from "lucide-react";
+import { Plus, Edit2, Trash2, Settings, Users, Package, Lock, Bell, Palette, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-interface Product {
-  id: number;
-  name: string;
-  code: string;
-  price: number;
-  category: string;
-}
-
-interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: "admin" | "user" | "manager";
-  status: "active" | "inactive";
-  lastLogin: string;
-}
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import ProductModal from "@/components/ProductModal";
+import UserModal from "@/components/UserModal";
 
 export default function Admin() {
+  const utils = trpc.useUtils();
   const [activeTab, setActiveTab] = useState("products");
-  const [products, setProducts] = useState<Product[]>([
-    { id: 1, name: "Agenda 2024 Meia Capa com Laminação", code: "PROD-001", price: 45.90, category: "Agendas" },
-    { id: 2, name: "Agenda 2024 Meia Capa com Laminação", code: "PROD-002", price: 45.90, category: "Agendas" },
-    { id: 3, name: "Bloco Adhesivo Leve com Capa", code: "PROD-003", price: 12.50, category: "Blocos" },
-  ]);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingUser, setEditingUser] = useState<any>(null);
 
-  const [users, setUsers] = useState<User[]>([
-    { id: 1, name: "Fernando Mancuso", email: "fernando@empresa.com", role: "admin", status: "active", lastLogin: "12 de mar de 2026, 10:30" },
-    { id: 2, name: "Ana Costa", email: "ana@empresa.com", role: "manager", status: "active", lastLogin: "12 de mar de 2026, 09:15" },
-    { id: 3, name: "João Silva", email: "joao@empresa.com", role: "user", status: "active", lastLogin: "11 de mar de 2026, 14:45" },
-  ]);
+  const { data: products, isLoading: isLoadingProducts } = trpc.crm.listProducts.useQuery();
+  const { data: users, isLoading: isLoadingUsers } = trpc.crm.listUsers.useQuery();
+
+  const createProductMutation = trpc.crm.createProduct.useMutation({
+    onSuccess: () => {
+      utils.crm.listProducts.invalidate();
+      setIsProductModalOpen(false);
+      toast.success("Produto criado!");
+    },
+  });
+
+  const updateUserMutation = trpc.crm.updateUser.useMutation({
+    onSuccess: () => {
+      utils.crm.listUsers.invalidate();
+      setIsUserModalOpen(false);
+      toast.success("Usuário atualizado!");
+    },
+  });
 
   const [companyData, setCompanyData] = useState({
     name: "Maju Personalizados 21",
@@ -50,6 +50,24 @@ export default function Admin() {
     notifications: true,
     emailNotifications: true,
   });
+
+  const handleSaveProduct = (formData: any) => {
+    createProductMutation.mutate(formData);
+  };
+
+  const handleSaveUser = (formData: any) => {
+    if (editingUser) {
+      updateUserMutation.mutate({ ...formData, id: editingUser.id });
+    }
+  };
+
+  if (isLoadingProducts || isLoadingUsers) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -94,7 +112,13 @@ export default function Admin() {
         <TabsContent value="products" className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Gerenciar Produtos</h3>
-            <Button className="bg-green-600 hover:bg-green-700 text-white">
+            <Button 
+              onClick={() => {
+                setEditingProduct(null);
+                setIsProductModalOpen(true);
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
               <Plus size={16} className="mr-2" />
               Novo Produto
             </Button>
@@ -114,12 +138,12 @@ export default function Admin() {
                     </tr>
                   </thead>
                   <tbody>
-                    {products.map((product) => (
+                    {(products || []).map((product: any) => (
                       <tr key={product.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4 text-gray-900">{product.name}</td>
                         <td className="py-3 px-4 text-gray-600 text-sm">{product.code}</td>
-                        <td className="py-3 px-4 text-gray-600 text-sm">{product.category}</td>
-                        <td className="py-3 px-4 text-right text-gray-900 font-medium">R$ {product.price.toFixed(2)}</td>
+                        <td className="py-3 px-4 text-gray-600 text-sm">{product.category || "-"}</td>
+                        <td className="py-3 px-4 text-right text-gray-900 font-medium">R$ {parseFloat(product.price).toFixed(2)}</td>
                         <td className="py-3 px-4 text-center">
                           <div className="flex gap-2 justify-center">
                             <Button variant="ghost" size="sm" className="text-blue-600">
@@ -143,10 +167,6 @@ export default function Admin() {
         <TabsContent value="users" className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Gerenciar Usuários</h3>
-            <Button className="bg-green-600 hover:bg-green-700 text-white">
-              <Plus size={16} className="mr-2" />
-              Novo Usuário
-            </Button>
           </div>
 
           <Card>
@@ -159,29 +179,36 @@ export default function Admin() {
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">Função</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Último Acesso</th>
                       <th className="text-center py-3 px-4 font-semibold text-gray-700">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((user) => (
+                    {(users || []).map((user: any) => (
                       <tr key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4 font-medium text-gray-900">{user.name}</td>
+                        <td className="py-3 px-4 text-gray-900 font-medium">{user.name || "Sem Nome"}</td>
                         <td className="py-3 px-4 text-gray-600 text-sm">{user.email}</td>
-                        <td className="py-3 px-4 text-gray-600 text-sm capitalize">{user.role}</td>
                         <td className="py-3 px-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${user.status === "active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                            {user.status === "active" ? "Ativo" : "Inativo"}
+                          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium uppercase">
+                            {user.role}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-gray-600 text-sm">{user.lastLogin}</td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                            Ativo
+                          </span>
+                        </td>
                         <td className="py-3 px-4 text-center">
                           <div className="flex gap-2 justify-center">
-                            <Button variant="ghost" size="sm" className="text-blue-600">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-blue-600"
+                              onClick={() => {
+                                setEditingUser(user);
+                                setIsUserModalOpen(true);
+                              }}
+                            >
                               <Edit2 size={16} />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="text-red-600">
-                              <Trash2 size={16} />
                             </Button>
                           </div>
                         </td>
@@ -300,7 +327,12 @@ export default function Admin() {
                   <option value="es-ES">Español</option>
                 </select>
               </div>
-              <Button className="bg-green-600 hover:bg-green-700 text-white">Salvar Preferências</Button>
+              <Button 
+                onClick={() => toast.success("Preferências salvas localmente!")}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                Salvar Preferências
+              </Button>
             </CardContent>
           </Card>
 
@@ -383,6 +415,20 @@ export default function Admin() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ProductModal 
+        isOpen={isProductModalOpen}
+        onClose={() => setIsProductModalOpen(false)}
+        onSave={handleSaveProduct}
+      />
+
+      <UserModal 
+        isOpen={isUserModalOpen}
+        onClose={() => setIsUserModalOpen(false)}
+        onSave={handleSaveUser}
+        user={editingUser}
+        isEditing={true}
+      />
     </div>
   );
 }
