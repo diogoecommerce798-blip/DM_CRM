@@ -125,10 +125,15 @@ export default function Pipeline() {
         probability: formData.probability,
       });
     } else {
+      // Se não houver um estágio selecionado (clique no botão do topo), 
+      // usamos o primeiro estágio disponível da lista carregada do banco.
+      const defaultStageId = stages.length > 0 ? parseInt(stages[0].id) : 1;
+      const finalStageId = selectedStageForNewDeal ? parseInt(selectedStageForNewDeal) : defaultStageId;
+
       createDealMutation.mutate({
         title: formData.title,
         value: String(formData.value || "0"),
-        stageId: parseInt(selectedStageForNewDeal || "0"),
+        stageId: finalStageId,
         probability: formData.probability,
       });
     }
