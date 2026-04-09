@@ -18,19 +18,34 @@ export const crmRouter = router({
       stageId: z.number(),
       contactId: z.number().optional(),
       companyId: z.number().optional(),
+      contactName: z.string().optional(),
+      companyName: z.string().optional(),
       probability: z.number().optional(),
       funnelId: z.number().optional(),
       source: z.string().optional(),
       visibility: z.string().optional(),
       ownerId: z.number().optional(),
       tags: z.string().optional(),
+      phone: z.string().optional(),
+      phoneType: z.string().optional(),
+      email: z.string().optional(),
+      emailType: z.string().optional(),
+      address: z.string().optional(),
+      potentialRating: z.string().optional(),
+      openingDate: z.string().optional(),
+      companySize: z.string().optional(),
+      registrationStatus: z.string().optional(),
+      cnpj: z.string().optional(),
+      complement: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       if (!ctx.user) throw new Error("Unauthorized");
       
+      const { openingDate, ...data } = input;
       const result = await db.getDb().then(d => 
         d.insert(schema.deals).values({
-          ...input,
+          ...data,
+          openingDate: openingDate ? new Date(openingDate) : null,
           userId: ctx.user!.id,
         }).returning()
       );
@@ -45,15 +60,37 @@ export const crmRouter = router({
       stageId: z.number().optional(),
       contactId: z.number().optional(),
       companyId: z.number().optional(),
+      contactName: z.string().optional(),
+      companyName: z.string().optional(),
       probability: z.number().optional(),
       status: z.string().optional(),
+      funnelId: z.number().optional(),
+      source: z.string().optional(),
+      visibility: z.string().optional(),
+      ownerId: z.number().optional(),
+      tags: z.string().optional(),
+      phone: z.string().optional(),
+      phoneType: z.string().optional(),
+      email: z.string().optional(),
+      emailType: z.string().optional(),
+      address: z.string().optional(),
+      potentialRating: z.string().optional(),
+      openingDate: z.string().optional(),
+      companySize: z.string().optional(),
+      registrationStatus: z.string().optional(),
+      cnpj: z.string().optional(),
+      complement: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       if (!ctx.user) throw new Error("Unauthorized");
-      const { id, ...data } = input;
+      const { id, openingDate, ...data } = input;
       const result = await db.getDb().then(d => 
         d.update(schema.deals)
-          .set({ ...data, updatedAt: new Date() })
+          .set({ 
+            ...data, 
+            openingDate: openingDate ? new Date(openingDate) : undefined,
+            updatedAt: new Date() 
+          })
           .where(eq(schema.deals.id, id))
           .returning()
       );
