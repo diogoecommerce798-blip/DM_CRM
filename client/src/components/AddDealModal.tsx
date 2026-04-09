@@ -15,7 +15,9 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
     contact: "",
     organization: "",
     title: "",
+    value: "0",
     funnel: "C - Interno",
+    funnelId: 1,
     stage: "Prospecção",
     tags: "",
     probability: 0,
@@ -44,7 +46,9 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
         contact: "",
         organization: "",
         title: "",
+        value: "0",
         funnel: "C - Interno",
+        funnelId: 1,
         stage: "Prospecção",
         tags: "",
         probability: 0,
@@ -160,11 +164,32 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Valor do Negócio (R$)
+                </label>
+                <Input
+                  name="value"
+                  type="number"
+                  placeholder="0.00"
+                  value={formData.value}
+                  onChange={handleChange}
+                  className="w-full"
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Funil</label>
                 <select
                   name="funnel"
                   value={formData.funnel}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      funnel: val,
+                      funnelId: val === "Vendas" ? 2 : (val === "Marketing" ? 3 : 1)
+                    }));
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 >
                   <option>C - Interno</option>
