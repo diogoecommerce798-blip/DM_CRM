@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, AlertCircle, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,10 +7,11 @@ interface AddDealModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (deal: any) => void;
+  initialData?: any;
 }
 
-export default function AddDealModal({ isOpen, onClose, onSave }: AddDealModalProps) {
-  const [formData, setFormData] = useState({
+export default function AddDealModal({ isOpen, onClose, onSave, initialData }: AddDealModalProps) {
+  const [formData, setFormData] = useState(initialData || {
     contact: "",
     organization: "",
     title: "",
@@ -21,17 +22,49 @@ export default function AddDealModal({ isOpen, onClose, onSave }: AddDealModalPr
     owner: "Fernando Mancuso (Você)",
     origin: "",
     visibility: "Todos os usuários",
-    sector: "",
+    phone: "",
+    phoneType: "Comercial",
+    email: "",
+    emailType: "Comercial",
     address: "",
-    owner2: "",
-    potentialClass: "",
-    openDate: "",
+    potentialRating: "",
+    openingDate: "",
     companySize: "",
-    cadastralStatus: "",
+    registrationStatus: "",
     cnpj: "",
-    tags2: "",
-    addressComplement: "",
+    complement: "",
   });
+
+  // Atualizar formData quando initialData mudar (abrir modal para editar)
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    } else {
+      setFormData({
+        contact: "",
+        organization: "",
+        title: "",
+        funnel: "C - Interno",
+        stage: "Prospecção",
+        tags: "",
+        probability: 0,
+        owner: "Fernando Mancuso (Você)",
+        origin: "",
+        visibility: "Todos os usuários",
+        phone: "",
+        phoneType: "Comercial",
+        email: "",
+        emailType: "Comercial",
+        address: "",
+        potentialRating: "",
+        openingDate: "",
+        companySize: "",
+        registrationStatus: "",
+        cnpj: "",
+        complement: "",
+      });
+    }
+  }, [initialData, isOpen]);
 
   const [dealValue, setDealValue] = useState("4.455/56.000");
 
@@ -227,82 +260,170 @@ export default function AddDealModal({ isOpen, onClose, onSave }: AddDealModalPr
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
                   <div className="flex gap-2">
-                    <Input placeholder="Telefone" className="flex-1" />
-                    <select className="px-3 py-2 border border-gray-300 rounded-md text-sm">
+                    <Input 
+                      name="phone"
+                      placeholder="Telefone" 
+                      className="flex-1" 
+                      value={formData.phone}
+                      onChange={handleChange}
+                    />
+                    <select 
+                      name="phoneType"
+                      className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      value={formData.phoneType}
+                      onChange={handleChange}
+                    >
                       <option>Comercial</option>
+                      <option>Celular</option>
+                      <option>Residencial</option>
                     </select>
                   </div>
                 </div>
 
-                <button className="text-sm text-blue-600 hover:text-blue-700">+ Adicionar telefone</button>
+                <button type="button" className="text-sm text-blue-600 hover:text-blue-700">+ Adicionar telefone</button>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">E-mail</label>
                   <div className="flex gap-2">
-                    <Input placeholder="E-mail" className="flex-1" />
-                    <select className="px-3 py-2 border border-gray-300 rounded-md text-sm">
+                    <Input 
+                      name="email"
+                      placeholder="E-mail" 
+                      className="flex-1" 
+                      value={formData.email}
+                      onChange={handleChange}
+                    />
+                    <select 
+                      name="emailType"
+                      className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      value={formData.emailType}
+                      onChange={handleChange}
+                    >
                       <option>Comercial</option>
+                      <option>Pessoal</option>
                     </select>
                   </div>
                 </div>
 
-                <button className="text-sm text-blue-600 hover:text-blue-700">+ Adicionar e-mail</button>
+                <button type="button" className="text-sm text-blue-600 hover:text-blue-700">+ Adicionar e-mail</button>
 
                 <h3 className="font-semibold text-gray-900 text-sm pt-4">ORGANIZAÇÃO</h3>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Endereço</label>
-                  <Input placeholder="Endereço" className="w-full" />
+                  <Input 
+                    name="address"
+                    placeholder="Endereço" 
+                    className="w-full" 
+                    value={formData.address}
+                    onChange={handleChange}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Proprietário</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                  <select 
+                    name="owner"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    value={formData.owner}
+                    onChange={handleChange}
+                  >
                     <option>Fernando Mancuso (Você)</option>
+                    <option>João Silva</option>
+                    <option>Maria Santos</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Classificação Potencial</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                  <select 
+                    name="potentialRating"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    value={formData.potentialRating}
+                    onChange={handleChange}
+                  >
                     <option>Selecionar...</option>
+                    <option>Alta</option>
+                    <option>Média</option>
+                    <option>Baixa</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Data de Abertura</label>
-                  <Input type="date" placeholder="DD/MM/YYYY" className="w-full" />
+                  <Input 
+                    name="openingDate"
+                    type="date" 
+                    className="w-full" 
+                    value={formData.openingDate}
+                    onChange={handleChange}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Porte da Empresa</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                  <select 
+                    name="companySize"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    value={formData.companySize}
+                    onChange={handleChange}
+                  >
                     <option>Selecionar...</option>
+                    <option>Pequena</option>
+                    <option>Média</option>
+                    <option>Grande</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Situação Cadastral</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                  <select 
+                    name="registrationStatus"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    value={formData.registrationStatus}
+                    onChange={handleChange}
+                  >
                     <option>Selecionar...</option>
+                    <option>Ativa</option>
+                    <option>Inativa</option>
+                    <option>Pendente</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">CNPJ</label>
-                  <Input placeholder="CNPJ" className="w-full" />
+                  <Input 
+                    name="cnpj"
+                    placeholder="CNPJ" 
+                    className="w-full" 
+                    value={formData.cnpj}
+                    onChange={handleChange}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Etiquetas</label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                  <select 
+                    name="tags"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    value={formData.tags}
+                    onChange={handleChange}
+                  >
                     <option>Selecionar...</option>
+                    <option>Urgente</option>
+                    <option>VIP</option>
+                    <option>Follow-up</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Complemento do Endereço</label>
-                  <Input placeholder="Complemento" className="w-full" />
+                  <Input 
+                    name="complement"
+                    placeholder="Complemento" 
+                    className="w-full" 
+                    value={formData.complement}
+                    onChange={handleChange}
+                  />
                 </div>
               </div>
             </div>

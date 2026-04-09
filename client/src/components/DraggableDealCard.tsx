@@ -1,6 +1,8 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent } from "@/components/ui/card";
+import { Pencil, Trash2 } from "lucide-react";
+import { Button } from "./ui/button";
 
 interface Deal {
   id: number;
@@ -14,9 +16,11 @@ interface Deal {
 interface DraggableDealCardProps {
   deal: Deal;
   stageId: string;
+  onEdit?: (deal: Deal) => void;
+  onDelete?: (id: number) => void;
 }
 
-export default function DraggableDealCard({ deal, stageId }: DraggableDealCardProps) {
+export default function DraggableDealCard({ deal, stageId, onEdit, onDelete }: DraggableDealCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `${stageId}-${deal.id}`,
     data: {
@@ -38,12 +42,40 @@ export default function DraggableDealCard({ deal, stageId }: DraggableDealCardPr
       style={style}
       {...attributes}
       {...listeners}
-      className={`cursor-grab active:cursor-grabbing ${isDragging ? "opacity-50" : ""}`}
+      className={`group relative cursor-grab active:cursor-grabbing ${isDragging ? "opacity-50" : ""}`}
     >
       <Card className="hover:shadow-md transition-shadow bg-white border border-gray-200">
         <CardContent className="p-4">
           <div className="space-y-2">
-            <h4 className="font-medium text-gray-900 text-sm">{deal.title}</h4>
+            <div className="flex items-start justify-between gap-2">
+              <h4 className="font-medium text-gray-900 text-sm flex-1">{deal.title}</h4>
+              <div className="hidden group-hover:flex items-center gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6" 
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit?.(deal);
+                  }}
+                >
+                  <Pencil className="h-3 w-3 text-gray-400" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 hover:text-red-600" 
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete?.(deal.id);
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
             <p className="text-xs text-gray-600">{deal.company}</p>
             <p className="text-xs text-gray-500">{deal.contact}</p>
 
