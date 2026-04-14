@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -42,13 +42,26 @@ export default function UserModal({
   isEditing = false,
 }: UserModalProps) {
   const [formData, setFormData] = useState<User>(
-    user || {
+    user ? { ...user } : {
       name: "",
       email: "",
       role: "user",
       status: "active",
     }
   );
+
+  useEffect(() => {
+    if (user) {
+      setFormData({ ...user });
+    } else {
+      setFormData({
+        name: "",
+        email: "",
+        role: "user",
+        status: "active",
+      });
+    }
+  }, [user, isOpen]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -84,14 +97,16 @@ export default function UserModal({
   };
 
   const handleClose = () => {
-    setFormData(
-      user || {
+    if (user) {
+      setFormData({ ...user });
+    } else {
+      setFormData({
         name: "",
         email: "",
         role: "user",
         status: "active",
-      }
-    );
+      });
+    }
     setErrors({});
     onClose();
   };
