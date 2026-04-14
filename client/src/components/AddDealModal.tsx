@@ -21,7 +21,7 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
     stage: "Prospecção",
     tags: "",
     probability: 0,
-    owner: "Fernando Mancuso (Você)",
+    ownerId: 1, // Fernando Mancuso (Você)
     origin: "",
     visibility: "Todos os usuários",
     phone: "",
@@ -52,7 +52,7 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
         stage: "Prospecção",
         tags: "",
         probability: 0,
-        owner: "Fernando Mancuso (Você)",
+        ownerId: 1, // Fernando Mancuso (Você)
         origin: "",
         visibility: "Todos os usuários",
         phone: "",
@@ -253,14 +253,14 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Proprietário</label>
                 <select
-                  name="owner"
-                  value={formData.owner}
+                  name="ownerId"
+                  value={formData.ownerId}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 >
-                  <option>Fernando Mancuso (Você)</option>
-                  <option>João Silva</option>
-                  <option>Maria Santos</option>
+                  <option value="1">Fernando Mancuso (Você)</option>
+                  <option value="2">João Silva</option>
+                  <option value="3">Maria Santos</option>
                 </select>
               </div>
 
@@ -362,19 +362,19 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Proprietário</label>
-                  <select 
-                    name="owner"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={formData.owner}
-                    onChange={handleChange}
-                  >
-                    <option value="Fernando Mancuso (Você)">Fernando Mancuso (Você)</option>
-                    <option value="João Silva">João Silva</option>
-                    <option value="Maria Santos">Maria Santos</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Proprietário</label>
+                <select
+                  name="ownerId"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  value={formData.ownerId}
+                  onChange={handleChange}
+                >
+                  <option value="1">Fernando Mancuso (Você)</option>
+                  <option value="2">João Silva</option>
+                  <option value="3">Maria Santos</option>
+                </select>
+              </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Classificação Potencial</label>

@@ -173,6 +173,7 @@ export default function Pipeline() {
         source: formData.origin,
         visibility: formData.visibility === "Todos os usuários" ? "everyone" : (formData.visibility === "Apenas eu" ? "private" : "team"),
         tags: formData.tags,
+        ownerId: parseInt(formData.ownerId) || 1,
         phone: formData.phone || undefined,
         phoneType: formData.phoneType || undefined,
         email: formData.email || undefined,
@@ -186,7 +187,7 @@ export default function Pipeline() {
         complement: formData.complement || undefined,
       });
     } else {
-      // Se não houver um estágio selecionado (clique no botão do topo), 
+      // Se não houver um estágio selecionado (clique no botão do topo),
       // usamos o primeiro estágio disponível da lista carregada do banco.
       const defaultStageId = stages.length > 0 ? parseInt(stages[0].id) : 1;
       const finalStageId = selectedStageForNewDeal ? parseInt(selectedStageForNewDeal) : defaultStageId;
@@ -202,6 +203,7 @@ export default function Pipeline() {
         source: formData.origin,
         visibility: formData.visibility === "Todos os usuários" ? "everyone" : (formData.visibility === "Apenas eu" ? "private" : "team"),
         tags: formData.tags,
+        ownerId: parseInt(formData.ownerId) || 1,
         phone: formData.phone || undefined,
         phoneType: formData.phoneType || undefined,
         email: formData.email || undefined,
