@@ -8,9 +8,10 @@ interface AddDealModalProps {
   onClose: () => void;
   onSave: (deal: any) => void;
   initialData?: any;
+  users?: any[]; // Adicionando prop para usuários
 }
 
-export default function AddDealModal({ isOpen, onClose, onSave, initialData }: AddDealModalProps) {
+export default function AddDealModal({ isOpen, onClose, onSave, initialData, users = [] }: AddDealModalProps) {
   const [formData, setFormData] = useState(initialData || {
     contact: "",
     organization: "",
@@ -21,7 +22,7 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
     stage: "Prospecção",
     tags: "",
     probability: 0,
-    ownerId: 1, // Fernando Mancuso (Você)
+    ownerId: 1, 
     origin: "",
     visibility: "Todos os usuários",
     phone: "",
@@ -35,13 +36,23 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
     registrationStatus: "",
     cnpj: "",
     complement: "",
+    description: "",
+    expectedCloseDate: "",
   });
 
   // Atualizar formData quando initialData mudar (abrir modal para editar)
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
-    } else {
+      setFormData({
+        ...initialData,
+        // Garantir campos padrão se estiverem nulos no initialData
+        ownerId: initialData.ownerId || (users && users.length > 0 ? users[0].id : 1),
+        value: initialData.value || "0",
+        probability: initialData.probability || 0,
+        openingDate: initialData.openingDate ? new Date(initialData.openingDate).toISOString().split('T')[0] : "",
+        expectedCloseDate: initialData.expectedCloseDate ? new Date(initialData.expectedCloseDate).toISOString().split('T')[0] : "",
+      });
+    } else if (isOpen) {
       setFormData({
         contact: "",
         organization: "",
@@ -52,7 +63,7 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
         stage: "Prospecção",
         tags: "",
         probability: 0,
-        ownerId: 1, // Fernando Mancuso (Você)
+        ownerId: users && users.length > 0 ? users[0].id : 1,
         origin: "",
         visibility: "Todos os usuários",
         phone: "",
@@ -66,9 +77,11 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
         registrationStatus: "",
         cnpj: "",
         complement: "",
+        description: "",
+        expectedCloseDate: "",
       });
     }
-  }, [initialData, isOpen]);
+  }, [initialData, isOpen, users]);
 
   const [dealValue, setDealValue] = useState("4.455/56.000");
 
@@ -251,17 +264,45 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Proprietário</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Proprietário do Negócio</label>
                 <select
                   name="ownerId"
                   value={formData.ownerId}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 >
-                  <option value="1">Fernando Mancuso (Você)</option>
-                  <option value="2">João Silva</option>
-                  <option value="3">Maria Santos</option>
+                  {users && users.length > 0 ? (
+                    users.map((user: any) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name || user.email}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="1">Carregando usuários...</option>
+                  )}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                <textarea
+                  name="description"
+                  placeholder="Descreva os detalhes do negócio..."
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm min-h-[100px]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Previsão de Fechamento</label>
+                <Input 
+                  name="expectedCloseDate"
+                  type="date" 
+                  className="w-full" 
+                  value={formData.expectedCloseDate}
+                  onChange={handleChange}
+                />
               </div>
 
               <div>
@@ -361,20 +402,6 @@ export default function AddDealModal({ isOpen, onClose, onSave, initialData }: A
                     onChange={handleChange}
                   />
                 </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Proprietário</label>
-                <select
-                  name="ownerId"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  value={formData.ownerId}
-                  onChange={handleChange}
-                >
-                  <option value="1">Fernando Mancuso (Você)</option>
-                  <option value="2">João Silva</option>
-                  <option value="3">Maria Santos</option>
-                </select>
-              </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Classificação Potencial</label>

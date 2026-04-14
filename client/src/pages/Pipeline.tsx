@@ -47,6 +47,7 @@ export default function Pipeline() {
 
   const { data: dbStages, isLoading } = trpc.crm.listStages.useQuery();
   const { data: dbDeals } = trpc.crm.listDeals.useQuery();
+  const { data: dbUsers } = trpc.crm.listUsers.useQuery();
 
   const createDealMutation = trpc.crm.createDeal.useMutation({
     onSuccess: () => {
@@ -185,6 +186,8 @@ export default function Pipeline() {
         registrationStatus: formData.registrationStatus || undefined,
         cnpj: formData.cnpj || undefined,
         complement: formData.complement || undefined,
+        description: formData.description || undefined,
+        expectedCloseDate: formData.expectedCloseDate || undefined,
       });
     } else {
       // Se não houver um estágio selecionado (clique no botão do topo),
@@ -215,6 +218,8 @@ export default function Pipeline() {
         registrationStatus: formData.registrationStatus || undefined,
         cnpj: formData.cnpj || undefined,
         complement: formData.complement || undefined,
+        description: formData.description || undefined,
+        expectedCloseDate: formData.expectedCloseDate || undefined,
       });
     }
     setIsModalOpen(false);
@@ -253,6 +258,7 @@ export default function Pipeline() {
       origin: fullDealData?.source,
       visibility: fullDealData?.visibility,
       tags: fullDealData?.tags,
+      ownerId: fullDealData?.ownerId,
       phone: fullDealData?.phone,
       phoneType: fullDealData?.phoneType,
       email: fullDealData?.email,
@@ -264,6 +270,8 @@ export default function Pipeline() {
       registrationStatus: fullDealData?.registrationStatus,
       cnpj: fullDealData?.cnpj,
       complement: fullDealData?.complement,
+      description: fullDealData?.description,
+      expectedCloseDate: fullDealData?.expectedCloseDate,
     });
     setIsModalOpen(true);
   };
@@ -435,6 +443,7 @@ export default function Pipeline() {
         }}
         onSave={handleSaveDeal}
         initialData={editingDeal}
+        users={dbUsers}
       />
 
       {/* Modal Coluna (Stage) */}
