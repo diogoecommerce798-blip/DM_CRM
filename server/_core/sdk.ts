@@ -251,7 +251,7 @@ class SDKServer {
 
     // 1. Tentar validar via Supabase (Recomendado)
     try {
-      const { data: { user: sbUser }, error: sbError } = await supabase.auth.getUser(token);
+      const { data: { user: sbUser }, error: sbError } = await (supabase.auth as any).getUser(token);
       
       if (!sbError && sbUser) {
         let user = await db.getUserByOpenId(sbUser.id);
