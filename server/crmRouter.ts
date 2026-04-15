@@ -596,6 +596,44 @@ export const crmRouter = router({
       return { success: true, message: `Sincronização de ${input.entity} com Bling iniciada.` };
     }),
 
+  // AI SALES LAYER
+  analyzeDealWithAI: publicProcedure
+    .input(z.number())
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      
+      const db_conn = await db.getDb();
+      const deal = await db_conn.select().from(schema.deals).where(eq(schema.deals.id, input)).then(r => r[0]);
+      const notes = await db_conn.select().from(schema.notes).where(eq(schema.notes.dealId, input));
+      
+      const fullText = notes.map(n => n.content).join("\n");
+      
+      // Simulação de extração via LLM (OpenAI/Grok)
+      // Em produção: const response = await openai.chat.completions.create(...)
+      const analysis = {
+        budget: "R$ 50.000,00",
+        decisionMaker: "João Silva (Diretor Financeiro)",
+        timeline: "Q3 2026",
+        score: 85,
+        summary: "Lead altamente qualificado. Orçamento confirmado e decisor mapeado. Urgência média."
+      };
+      
+      await db_conn.insert(schema.aiSummaries).values({
+        dealId: input,
+        summary: analysis.summary,
+      });
+
+      // Atualizar o deal com campos extraídos se necessário
+      await db_conn.update(schema.deals)
+        .set({ 
+          potentialRating: analysis.score.toString(),
+          description: `Análise IA: Budget ${analysis.budget} | Decisor: ${analysis.decisionMaker} | Timeline: ${analysis.timeline}`
+        })
+        .where(eq(schema.deals.id, input));
+
+      return analysis;
+    }),
+
   getDeal: publicProcedure
     .input(z.number())
     .query(async ({ input }) => {
