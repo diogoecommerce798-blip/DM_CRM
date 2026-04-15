@@ -192,6 +192,20 @@ export const deals = pgTable("deals", {
 export type Deal = typeof deals.$inferSelect;
 export type InsertDeal = typeof deals.$inferInsert;
 
+export const opportunityPhotos = pgTable("opportunity_photos", {
+  id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+  opportunityId: integer("opportunity_id").references(() => deals.id, { onDelete: "cascade" }).notNull(),
+  fileName: text("file_name").notNull(),
+  filePath: text("file_path").notNull(),
+  publicUrl: text("public_url").notNull(),
+  description: text("description"),
+  uploadedAt: timestamp("uploaded_at").defaultNow().notNull(),
+  uploadedBy: integer("uploaded_by").references(() => users.id),
+});
+
+export type OpportunityPhoto = typeof opportunityPhotos.$inferSelect;
+export type InsertOpportunityPhoto = typeof opportunityPhotos.$inferInsert;
+
 // 3. INTERACTIONS & ACTIVITIES
 export const interactions = pgTable("interactions", {
   id: serial("id").primaryKey(),

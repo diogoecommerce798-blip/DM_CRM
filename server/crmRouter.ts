@@ -37,15 +37,18 @@ export const crmRouter = router({
       registrationStatus: z.string().optional(),
       cnpj: z.string().optional(),
       complement: z.string().optional(),
+      description: z.string().optional(),
+      expectedCloseDate: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       if (!ctx.user) throw new Error("Unauthorized");
       
-      const { openingDate, ...data } = input;
+      const { openingDate, expectedCloseDate, ...data } = input;
       const result = await db.getDb().then(d => 
         d.insert(schema.deals).values({
           ...data,
           openingDate: openingDate ? new Date(openingDate) : null,
+          expectedCloseDate: expectedCloseDate ? new Date(expectedCloseDate) : null,
           userId: ctx.user!.id,
         }).returning()
       );
@@ -80,15 +83,18 @@ export const crmRouter = router({
       registrationStatus: z.string().optional(),
       cnpj: z.string().optional(),
       complement: z.string().optional(),
+      description: z.string().optional(),
+      expectedCloseDate: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       if (!ctx.user) throw new Error("Unauthorized");
-      const { id, openingDate, ...data } = input;
+      const { id, openingDate, expectedCloseDate, ...data } = input;
       const result = await db.getDb().then(d => 
         d.update(schema.deals)
           .set({ 
             ...data, 
             openingDate: openingDate ? new Date(openingDate) : undefined,
+            expectedCloseDate: expectedCloseDate ? new Date(expectedCloseDate) : undefined,
             updatedAt: new Date() 
           })
           .where(eq(schema.deals.id, id))
@@ -198,6 +204,62 @@ export const crmRouter = router({
       return result[0];
     }),
 
+  // FOTOS (OPPORTUNITY PHOTOS)
+  listOpportunityPhotos: publicProcedure
+    .input(z.object({ opportunityId: z.number() }))
+    .query(async ({ input }) => {
+      return await db.getDb().then(d => 
+        d.select().from(schema.opportunityPhotos)
+          .where(eq(schema.opportunityPhotos.opportunityId, input.opportunityId))
+          .orderBy(schema.opportunityPhotos.uploadedAt)
+      );
+    }),
+
+  addOpportunityPhoto: publicProcedure
+    .input(z.object({
+      opportunityId: z.number(),
+      fileName: z.string(),
+      filePath: z.string(),
+      publicUrl: z.string(),
+      description: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const result = await db.getDb().then(d => 
+        d.insert(schema.opportunityPhotos).values({
+          ...input,
+          uploadedBy: ctx.user!.id,
+        }).returning()
+      );
+      return result[0];
+    }),
+
+  updateOpportunityPhotoDescription: publicProcedure
+    .input(z.object({
+      id: z.string(),
+      description: z.string(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const result = await db.getDb().then(d => 
+        d.update(schema.opportunityPhotos)
+          .set({ description: input.description })
+          .where(eq(schema.opportunityPhotos.id, input.id))
+          .returning()
+      );
+      return result[0];
+    }),
+
+  deleteOpportunityPhoto: publicProcedure
+    .input(z.string())
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      await db.getDb().then(d => 
+        d.delete(schema.opportunityPhotos).where(eq(schema.opportunityPhotos.id, input))
+      );
+      return { success: true };
+    }),
+
   deleteNote: publicProcedure
     .input(z.number())
     .mutation(async ({ input, ctx }) => {
@@ -206,6 +268,24 @@ export const crmRouter = router({
         d.delete(schema.notes).where(eq(schema.notes.id, input))
       );
       return { success: true };
+    }),
+
+  updateNote: publicProcedure
+    .input(z.object({
+      id: z.number(),
+      title: z.string().optional(),
+      content: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const { id, ...data } = input;
+      const result = await db.getDb().then(d => 
+        d.update(schema.notes)
+          .set({ ...data, updatedAt: new Date() })
+          .where(eq(schema.notes.id, id))
+          .returning()
+      );
+      return result[0];
     }),
 
   // ORGANIZAÇÕES (COMPANIES)
@@ -351,6 +431,15 @@ export const crmRouter = router({
           .set({ ...data, updatedAt: new Date() })
           .where(eq(schema.users.id, id))
           .returning()
+      );
+      return result[0];
+    }),
+
+  getDeal: publicProcedure
+    .input(z.number())
+    .query(async ({ input }) => {
+      const result = await db.getDb().then(d => 
+        d.select().from(schema.deals).where(eq(schema.deals.id, input))
       );
       return result[0];
     }),
