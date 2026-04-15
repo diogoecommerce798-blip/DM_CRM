@@ -81,14 +81,17 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-700 space-y-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start text-gray-300 hover:text-white hover:bg-slate-700"
+          <button
+            onClick={() => setLocation("/settings")}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              isActive("/settings")
+                ? "bg-blue-600 text-white"
+                : "text-gray-300 hover:bg-slate-700 hover:text-white"
+            }`}
           >
             <Settings size={20} className="flex-shrink-0" />
-            {sidebarOpen && <span className="ml-3 text-sm">Configurações</span>}
-          </Button>
+            {sidebarOpen && <span className="text-sm font-medium">Configurações</span>}
+          </button>
           <Button
             variant="ghost"
             size="sm"

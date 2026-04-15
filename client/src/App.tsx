@@ -17,6 +17,7 @@ import Marketing from "@/pages/Marketing";
 import Automation from "@/pages/Automation";
 import Notes from "@/pages/Notes";
 import OpportunityDetails from "@/pages/OpportunityDetails";
+import SettingsPage from "@/pages/Settings";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Loader2, AlertTriangle } from "lucide-react";
 
@@ -54,6 +55,7 @@ function Router() {
         <Route path={"/leads"} component={Leads} />
         <Route path={"/automation"} component={Automation} />
         <Route path={"/notes"} component={Notes} />
+        <Route path={"/settings"} component={SettingsPage} />
         <Route path={"/admin"} component={Admin} />
         <Route path={"/404"} component={NotFound} />
         <Route path={"/auth-error"} component={() => (
