@@ -13,9 +13,10 @@ import Pipeline from "./pages/Pipeline";
 import Leads from "./pages/Leads";
 import Reports from "./pages/Reports";
 import Admin from "./pages/Admin";
-import Marketing from "./pages/Marketing";
-import Automation from "./pages/Automation";
-import Notes from "./pages/Notes";
+import Marketing from "@/pages/Marketing";
+import Automation from "@/pages/Automation";
+import Notes from "@/pages/Notes";
+import OpportunityDetails from "@/pages/OpportunityDetails";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Loader2, AlertTriangle } from "lucide-react";
 
@@ -46,6 +47,7 @@ function Router() {
         <Route path={"/dashboard"} component={Dashboard} />
         <Route path={"/contacts"} component={Contacts} />
         <Route path={"/pipeline"} component={Pipeline} />
+        <Route path={"/pipeline/:id"} component={OpportunityDetails} />
         <Route path={"/marketing"} component={Marketing} />
         <Route path={"/support"} component={() => <div>Atendimento - Em desenvolvimento</div>} />
         <Route path={"/reports"} component={Reports} />

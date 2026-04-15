@@ -1,8 +1,9 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent } from "@/components/ui/card";
-import { Edit2, Trash2 } from "lucide-react";
+import { Edit2, Trash2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 
 interface Deal {
   id: number;
@@ -21,6 +22,7 @@ interface DraggableDealCardProps {
 }
 
 export default function DraggableDealCard({ deal, stageId, onEdit, onDelete }: DraggableDealCardProps) {
+  const [, setLocation] = useLocation();
   const {
     attributes,
     listeners,
@@ -50,8 +52,29 @@ export default function DraggableDealCard({ deal, stageId, onEdit, onDelete }: D
     >
       <CardContent className="p-3" {...attributes} {...listeners}>
         <div className="flex justify-between items-start mb-2">
-          <h4 className="font-medium text-sm text-gray-900 pr-8">{deal.title}</h4>
+          <h4 
+            className="font-medium text-sm text-gray-900 pr-8 hover:text-blue-600 hover:underline cursor-pointer"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              setLocation(`/pipeline/${deal.id}`);
+            }}
+          >
+            {deal.title}
+          </h4>
           <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-blue-400 pointer-events-auto"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocation(`/pipeline/${deal.id}`);
+              }}
+            >
+              <ExternalLink size={14} />
+            </Button>
             {onEdit && (
               <Button
                 variant="ghost"
@@ -107,3 +130,4 @@ export default function DraggableDealCard({ deal, stageId, onEdit, onDelete }: D
     </Card>
   );
 }
+
