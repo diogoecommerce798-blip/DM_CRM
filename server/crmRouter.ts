@@ -2,7 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "./_core/trpc.js";
 import * as db from "./db.js";
 import * as schema from "../drizzle/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export const crmRouter = router({
   // NEGÓCIOS (DEALS)
@@ -206,18 +206,33 @@ export const crmRouter = router({
 
   // FOTOS (OPPORTUNITY PHOTOS)
   listOpportunityPhotos: publicProcedure
-    .input(z.object({ opportunityId: z.number() }))
+    .input(z.object({ 
+      opportunityId: z.number(),
+      productId: z.number().optional()
+    }))
     .query(async ({ input }) => {
-      return await db.getDb().then(d => 
+      let query = db.getDb().then(d => 
         d.select().from(schema.opportunityPhotos)
           .where(eq(schema.opportunityPhotos.opportunityId, input.opportunityId))
-          .orderBy(schema.opportunityPhotos.uploadedAt)
       );
+      
+      if (input.productId) {
+        query = db.getDb().then(d => 
+          d.select().from(schema.opportunityPhotos)
+            .where(and(
+              eq(schema.opportunityPhotos.opportunityId, input.opportunityId),
+              eq(schema.opportunityPhotos.productId, input.productId)
+            ))
+        );
+      }
+
+      return await query.then(rows => rows.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime()));
     }),
 
   addOpportunityPhoto: publicProcedure
     .input(z.object({
       opportunityId: z.number(),
+      productId: z.number().optional(),
       fileName: z.string(),
       filePath: z.string(),
       publicUrl: z.string(),
@@ -256,6 +271,49 @@ export const crmRouter = router({
       if (!ctx.user) throw new Error("Unauthorized");
       await db.getDb().then(d => 
         d.delete(schema.opportunityPhotos).where(eq(schema.opportunityPhotos.id, input))
+      );
+      return { success: true };
+    }),
+
+  // PRODUTOS DO NEGÓCIO (DEAL PRODUCTS)
+  listDealProducts: publicProcedure
+    .input(z.number())
+    .query(async ({ input }) => {
+      const result = await db.getDb().then(d => 
+        d.select({
+          id: schema.products.id,
+          name: schema.products.name,
+          price: schema.products.price,
+          quantity: schema.dealProducts.quantity,
+          dealProductId: schema.dealProducts.id,
+        })
+        .from(schema.dealProducts)
+        .innerJoin(schema.products, eq(schema.dealProducts.productId, schema.products.id))
+        .where(eq(schema.dealProducts.dealId, input))
+      );
+      return result;
+    }),
+
+  addDealProduct: publicProcedure
+    .input(z.object({
+      dealId: z.number(),
+      productId: z.number(),
+      quantity: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const result = await db.getDb().then(d => 
+        d.insert(schema.dealProducts).values(input).returning()
+      );
+      return result[0];
+    }),
+
+  deleteDealProduct: publicProcedure
+    .input(z.number())
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      await db.getDb().then(d => 
+        d.delete(schema.dealProducts).where(eq(schema.dealProducts.id, input))
       );
       return { success: true };
     }),

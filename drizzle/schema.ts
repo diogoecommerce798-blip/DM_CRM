@@ -195,6 +195,7 @@ export type InsertDeal = typeof deals.$inferInsert;
 export const opportunityPhotos = pgTable("opportunity_photos", {
   id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
   opportunityId: integer("opportunity_id").references(() => deals.id, { onDelete: "cascade" }).notNull(),
+  productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
   fileName: text("file_name").notNull(),
   filePath: text("file_path").notNull(),
   publicUrl: text("public_url").notNull(),
@@ -205,6 +206,18 @@ export const opportunityPhotos = pgTable("opportunity_photos", {
 
 export type OpportunityPhoto = typeof opportunityPhotos.$inferSelect;
 export type InsertOpportunityPhoto = typeof opportunityPhotos.$inferInsert;
+
+export const dealProducts = pgTable("deal_products", {
+  id: serial("id").primaryKey(),
+  dealId: integer("deal_id").references(() => deals.id, { onDelete: "cascade" }).notNull(),
+  productId: integer("product_id").references(() => products.id, { onDelete: "cascade" }).notNull(),
+  quantity: integer("quantity").default(1),
+  priceAtTime: varchar("price_at_time", { length: 50 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DealProduct = typeof dealProducts.$inferSelect;
+export type InsertDealProduct = typeof dealProducts.$inferInsert;
 
 // 3. INTERACTIONS & ACTIVITIES
 export const interactions = pgTable("interactions", {
