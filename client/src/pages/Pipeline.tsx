@@ -21,6 +21,7 @@ import DroppableStage from "@/components/DroppableStage";
 import DraggableDealCard from "@/components/DraggableDealCard";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 interface Deal {
   id: number;
@@ -48,6 +49,33 @@ export default function Pipeline() {
   const { data: dbStages, isLoading } = trpc.crm.listStages.useQuery();
   const { data: dbDeals } = trpc.crm.listDeals.useQuery();
   const { data: dbUsers } = trpc.crm.listUsers.useQuery();
+
+  // Ativar Realtime do Supabase para sincronização instantânea entre usuários
+  useEffect(() => {
+    if (!supabase) return;
+
+    const channel = supabase
+      .channel('pipeline-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'deals' },
+        () => {
+          utils.crm.listDeals.invalidate();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'stages' },
+        () => {
+          utils.crm.listStages.invalidate();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [utils]);
 
   const createDealMutation = trpc.crm.createDeal.useMutation({
     onSuccess: () => {
