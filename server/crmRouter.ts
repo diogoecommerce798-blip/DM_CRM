@@ -174,6 +174,7 @@ export const crmRouter = router({
     .input(z.object({
       title: z.string().min(1),
       content: z.string().optional(),
+      dealId: z.number().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       if (!ctx.user) throw new Error("Unauthorized");
@@ -211,22 +212,18 @@ export const crmRouter = router({
       productId: z.number().optional()
     }))
     .query(async ({ input }) => {
-      let query = db.getDb().then(d => 
-        d.select().from(schema.opportunityPhotos)
-          .where(eq(schema.opportunityPhotos.opportunityId, input.opportunityId))
-      );
+      const d = await db.getDb();
+      let conditions = [eq(schema.opportunityPhotos.opportunityId, input.opportunityId)];
       
       if (input.productId) {
-        query = db.getDb().then(d => 
-          d.select().from(schema.opportunityPhotos)
-            .where(and(
-              eq(schema.opportunityPhotos.opportunityId, input.opportunityId),
-              eq(schema.opportunityPhotos.productId, input.productId)
-            ))
-        );
+        conditions.push(eq(schema.opportunityPhotos.productId, input.productId));
       }
 
-      return await query.then(rows => rows.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime()));
+      const photos = await d.select()
+        .from(schema.opportunityPhotos)
+        .where(and(...conditions));
+
+      return photos.sort((a: any, b: any) => b.uploadedAt.getTime() - a.uploadedAt.getTime());
     }),
 
   addOpportunityPhoto: publicProcedure
@@ -326,24 +323,6 @@ export const crmRouter = router({
         d.delete(schema.notes).where(eq(schema.notes.id, input))
       );
       return { success: true };
-    }),
-
-  updateNote: publicProcedure
-    .input(z.object({
-      id: z.number(),
-      title: z.string().optional(),
-      content: z.string().optional(),
-    }))
-    .mutation(async ({ input, ctx }) => {
-      if (!ctx.user) throw new Error("Unauthorized");
-      const { id, ...data } = input;
-      const result = await db.getDb().then(d => 
-        d.update(schema.notes)
-          .set({ ...data, updatedAt: new Date() })
-          .where(eq(schema.notes.id, id))
-          .returning()
-      );
-      return result[0];
     }),
 
   // ORGANIZAÇÕES (COMPANIES)
@@ -491,6 +470,130 @@ export const crmRouter = router({
           .returning()
       );
       return result[0];
+    }),
+
+  // ATIVIDADES / INTERAÇÕES
+  listActivities: publicProcedure
+    .input(z.number())
+    .query(async ({ input }) => {
+      return await db.getDb().then(d => 
+        d.select().from(schema.interactions)
+          .where(eq(schema.interactions.dealId, input))
+          .orderBy(schema.interactions.createdAt)
+      );
+    }),
+
+  createActivity: publicProcedure
+    .input(z.object({
+      dealId: z.number(),
+      type: z.string(),
+      subject: z.string(),
+      description: z.string().optional(),
+      dueDate: z.string().optional(),
+      priority: z.string().optional(),
+      location: z.string().optional(),
+      participants: z.string().optional(),
+      duration: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const result = await db.getDb().then(d => 
+        d.insert(schema.interactions).values({
+          ...input,
+          userId: ctx.user!.id,
+          dueDate: input.dueDate ? new Date(input.dueDate) : null,
+        }).returning()
+      );
+      return result[0];
+    }),
+
+  // WHATSAPP
+  listWhatsappMessages: publicProcedure
+    .input(z.number())
+    .query(async ({ input }) => {
+      return await db.getDb().then(d => 
+        d.select().from(schema.whatsappMessages)
+          .where(eq(schema.whatsappMessages.dealId, input))
+          .orderBy(schema.whatsappMessages.timestamp)
+      );
+    }),
+
+  logWhatsappMessage: publicProcedure
+    .input(z.object({
+      dealId: z.number(),
+      contactId: z.number().optional(),
+      message: z.string(),
+      direction: z.string(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const result = await db.getDb().then(d => 
+        d.insert(schema.whatsappMessages).values(input).returning()
+      );
+      return result[0];
+    }),
+
+  // AI SUMMARY
+  getAiSummary: publicProcedure
+    .input(z.number())
+    .query(async ({ input }) => {
+      const result = await db.getDb().then(d => 
+        d.select().from(schema.aiSummaries)
+          .where(eq(schema.aiSummaries.dealId, input))
+          .orderBy(schema.aiSummaries.createdAt)
+      );
+      return result[result.length - 1];
+    }),
+
+  generateAiSummary: publicProcedure
+    .input(z.number())
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      
+      // Placeholder para integração com IA (OpenAI/Grok)
+      const summary = "Esta oportunidade está em progresso. O cliente demonstrou interesse inicial e aguarda uma proposta formal. Próximo passo sugerido: Enviar orçamento detalhado até o final da semana.";
+      
+      const result = await db.getDb().then(d => 
+        d.insert(schema.aiSummaries).values({
+          dealId: input,
+          summary,
+        }).returning()
+      );
+      return result[0];
+    }),
+
+  // HISTÓRICO CRONOLÓGICO (Timeline)
+  getDealTimeline: publicProcedure
+    .input(z.number())
+    .query(async ({ input }) => {
+      const db_conn = await db.getDb();
+      
+      const activities = await db_conn.select().from(schema.interactions).where(eq(schema.interactions.dealId, input));
+      const notes = await db_conn.select().from(schema.notes).where(eq(schema.notes.dealId, input));
+      const photos = await db_conn.select().from(schema.opportunityPhotos).where(eq(schema.opportunityPhotos.opportunityId, input));
+      const whatsapp = await db_conn.select().from(schema.whatsappMessages).where(eq(schema.whatsappMessages.dealId, input));
+
+      const timeline = [
+        ...activities.map(a => ({ type: 'activity', date: a.createdAt, data: a })),
+        ...notes.map(n => ({ type: 'note', date: n.createdAt, data: n })),
+        ...photos.map(p => ({ type: 'photo', date: p.uploadedAt, data: p })),
+        ...whatsapp.map(w => ({ type: 'whatsapp', date: w.timestamp, data: w })),
+      ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+      return timeline;
+    }),
+
+  // BLING ERP INTEGRATION (PLACEHOLDERS)
+  syncWithBling: publicProcedure
+    .input(z.object({
+      entity: z.enum(['products', 'contacts', 'orders']),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      // Placeholder para integração Bling API v3
+      // Endpoint: https://www.bling.com.br/Api/v3/produtos
+      // Headers: { "Authorization": `Bearer ${process.env.BLING_API_KEY}` }
+      return { success: true, message: `Sincronização de ${input.entity} com Bling iniciada.` };
     }),
 
   getDeal: publicProcedure
