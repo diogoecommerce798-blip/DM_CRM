@@ -16,7 +16,9 @@ import {
   Trash2,
   CheckCircle2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Package,
+  Plus
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +26,72 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import OpportunityPhotos from "@/components/OpportunityPhotos";
+import { useState, useMemo } from "react";
+
+function ProductSection({ dealId }: { dealId: number }) {
+  const { data: products, isLoading: productsLoading } = trpc.crm.listDealProducts.useQuery(dealId);
+  const { data: allPhotos } = trpc.crm.listOpportunityPhotos.useQuery({ opportunityId: dealId });
+
+  if (productsLoading) return <Loader2 className="animate-spin h-4 w-4" />;
+
+  return (
+    <Card className="border-gray-200 shadow-sm">
+      <CardHeader className="p-4 border-b border-gray-100 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-semibold uppercase tracking-wider text-gray-500">Produto</CardTitle>
+        <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400"><Plus size={14} /></Button>
+      </CardHeader>
+      <CardContent className="p-4 space-y-4">
+        {products && products.length > 0 ? (
+          products.map((product: any) => {
+            const productPhotos = allPhotos?.filter(p => p.productId === product.id).slice(0, 3);
+            
+            return (
+              <div key={product.dealProductId} className="space-y-2 pb-3 border-b border-gray-50 last:border-0 last:pb-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Package size={14} className="text-blue-500" />
+                    <span className="text-sm font-bold text-gray-900">{product.name}</span>
+                  </div>
+                  <span className="text-xs font-medium text-gray-500">x{product.quantity}</span>
+                </div>
+                
+                {/* Mini thumbnails of photos linked to this product */}
+                {productPhotos && productPhotos.length > 0 && (
+                  <div className="flex gap-1.5">
+                    {productPhotos.map((photo: any) => (
+                      <div key={photo.id} className="w-8 h-8 rounded border border-gray-100 overflow-hidden bg-gray-50">
+                        <img src={photo.publicUrl} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                    {allPhotos && allPhotos.filter(p => p.productId === product.id).length > 3 && (
+                      <div className="w-8 h-8 rounded border border-gray-100 bg-gray-50 flex items-center justify-center text-[10px] text-gray-400 font-bold">
+                        +{allPhotos.filter(p => p.productId === product.id).length - 3}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                <p className="text-xs text-blue-600 font-semibold">
+                  R$ {parseFloat(product.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            )
+          })
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-xs text-gray-400 italic">Nenhum produto vinculado</p>
+            <Button variant="link" className="text-xs text-blue-600 h-auto p-0 mt-2">+ Adicionar produto</Button>
+          </div>
+        )}
+        <div className="pt-2 border-t border-gray-100">
+          <Button variant="link" className="text-xs text-gray-500 h-auto p-0 flex items-center gap-1">
+            <Plus size={12} /> Adicionar parcelamento
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function OpportunityDetails() {
   const [, params] = useRoute("/pipeline/:id");
@@ -150,6 +218,8 @@ export default function OpportunityDetails() {
               </div>
             </CardContent>
           </Card>
+
+          <ProductSection dealId={dealId as number} />
         </div>
 
         {/* Área Principal (Tabs) */}
