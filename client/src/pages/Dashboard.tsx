@@ -1,44 +1,92 @@
-import { BarChart3, TrendingUp, Users, DollarSign, Activity, Clock } from "lucide-react";
+import { BarChart3, TrendingUp, Users, DollarSign, Activity, Clock, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { trpc } from "@/lib/trpc";
+import { useMemo } from "react";
 
 export default function Dashboard() {
-  // Mock data - será substituído por dados reais do banco
-  const kpis = [
-    {
-      title: "Receita Total",
-      value: "R$ 125.430",
-      change: "+12.5%",
-      icon: DollarSign,
-      color: "bg-green-100 text-green-600",
-    },
-    {
-      title: "Oportunidades Abertas",
-      value: "24",
-      change: "+3",
-      icon: TrendingUp,
-      color: "bg-blue-100 text-blue-600",
-    },
-    {
-      title: "Contatos",
-      value: "156",
-      change: "+8",
-      icon: Users,
-      color: "bg-purple-100 text-purple-600",
-    },
-    {
-      title: "Taxa de Conversão",
-      value: "32.5%",
-      change: "+2.3%",
-      icon: Activity,
-      color: "bg-orange-100 text-orange-600",
-    },
-  ];
+  const { data: dbDeals, isLoading: dealsLoading } = trpc.crm.listDeals.useQuery();
+  const { data: dbContacts, isLoading: contactsLoading } = trpc.crm.listContacts.useQuery();
+  const { data: dbStages, isLoading: stagesLoading } = trpc.crm.listStages.useQuery();
 
-  const recentDeals = [
-    { id: 1, title: "Contrato com Empresa X", value: "R$ 45.000", stage: "Negociação", date: "2 dias atrás" },
-    { id: 2, title: "Projeto de Consultoria", value: "R$ 32.000", stage: "Proposta", date: "5 dias atrás" },
-    { id: 3, title: "Implementação de Software", value: "R$ 28.500", stage: "Qualificação", date: "1 semana atrás" },
-  ];
+  const isLoading = dealsLoading || contactsLoading || stagesLoading;
+
+  const { kpis, recentDeals, stats } = useMemo(() => {
+    if (!dbDeals || !dbContacts || !dbStages) {
+      return { kpis: [], recentDeals: [], stats: { contacts: 0, wonDeals: 0 } };
+    }
+
+    const totalRevenue = dbDeals.reduce((sum, deal) => sum + (parseFloat(deal.value) || 0), 0);
+    const openDeals = dbDeals.filter(d => d.status === "open").length;
+    const totalContacts = dbContacts.length;
+    
+    // Won deals: status is won or in the last stage
+    const lastStageId = dbStages.sort((a, b) => b.order - a.order)[0]?.id;
+    const wonDeals = dbDeals.filter(d => d.status === "won" || d.stageId === lastStageId).length;
+    const conversionRate = dbDeals.length > 0 ? (wonDeals / dbDeals.length) * 100 : 0;
+
+    const kpiList = [
+      {
+        title: "Receita Total",
+        value: `R$ ${totalRevenue.toLocaleString()}`,
+        change: "+12.5%", // Estático por enquanto
+        icon: DollarSign,
+        color: "bg-green-100 text-green-600",
+      },
+      {
+        title: "Oportunidades Abertas",
+        value: String(openDeals),
+        change: "+3",
+        icon: TrendingUp,
+        color: "bg-blue-100 text-blue-600",
+      },
+      {
+        title: "Contatos",
+        value: String(totalContacts),
+        change: "+8",
+        icon: Users,
+        color: "bg-purple-100 text-purple-600",
+      },
+      {
+        title: "Taxa de Conversão",
+        value: `${conversionRate.toFixed(1)}%`,
+        change: "+2.3%",
+        icon: Activity,
+        color: "bg-orange-100 text-orange-600",
+      },
+    ];
+
+    const sortedDeals = [...dbDeals]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 3)
+      .map(d => {
+        const stage = dbStages.find(s => s.id === d.stageId)?.name || "N/A";
+        const date = new Date(d.createdAt).toLocaleDateString();
+        return {
+          id: d.id,
+          title: d.title,
+          value: `R$ ${(parseFloat(d.value) || 0).toLocaleString()}`,
+          stage,
+          date
+        };
+      });
+
+    return {
+      kpis: kpiList,
+      recentDeals: sortedDeals,
+      stats: {
+        contacts: totalContacts,
+        wonDeals: wonDeals
+      }
+    };
+  }, [dbDeals, dbContacts, dbStages]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+      </div>
+    );
+  }
 
   const upcomingTasks = [
     { id: 1, title: "Ligar para Cliente ABC", dueDate: "Hoje", priority: "high" },
@@ -52,7 +100,7 @@ export default function Dashboard() {
       {/* Page Header */}
       <div>
         <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
-        <p className="text-gray-500 mt-1">Visão geral do seu CRM</p>
+        <p className="text-gray-500 mt-1">Visão geral do seu CRM em tempo real</p>
       </div>
 
       {/* KPIs Grid */}
@@ -90,7 +138,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentDeals.map((deal) => (
+              {recentDeals.map((deal: any) => (
                 <div key={deal.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                   <div className="flex-1">
                     <h4 className="font-medium text-gray-900">{deal.title}</h4>
@@ -104,6 +152,9 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))}
+              {recentDeals.length === 0 && (
+                <p className="text-center text-gray-500 py-4">Nenhuma oportunidade encontrada</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -149,25 +200,25 @@ export default function Dashboard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 size={24} />
-            Estatísticas do Mês
+            Estatísticas do Sistema
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="text-center">
-              <p className="text-3xl font-bold text-blue-600">42</p>
-              <p className="text-sm text-gray-600 mt-1">Contatos Adicionados</p>
+              <p className="text-3xl font-bold text-blue-600">{stats.contacts}</p>
+              <p className="text-sm text-gray-600 mt-1">Contatos Totais</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-green-600">18</p>
+              <p className="text-3xl font-bold text-green-600">{stats.wonDeals}</p>
               <p className="text-sm text-gray-600 mt-1">Deals Fechados</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-purple-600">156</p>
+              <p className="text-3xl font-bold text-purple-600">0</p>
               <p className="text-sm text-gray-600 mt-1">Emails Enviados</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-orange-600">89</p>
+              <p className="text-3xl font-bold text-orange-600">0</p>
               <p className="text-sm text-gray-600 mt-1">Chamadas Realizadas</p>
             </div>
           </div>
@@ -176,3 +227,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

@@ -1,42 +1,164 @@
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Filter } from "lucide-react";
+import { Download, Filter, Loader2 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { useMemo } from "react";
 
 export default function Reports() {
-  // Mock data for charts
-  const revenueData = [
-    { month: "Jan", revenue: 45000, target: 50000 },
-    { month: "Fev", revenue: 52000, target: 50000 },
-    { month: "Mar", revenue: 48000, target: 50000 },
-    { month: "Abr", revenue: 61000, target: 60000 },
-    { month: "Mai", revenue: 55000, target: 60000 },
-    { month: "Jun", revenue: 67000, target: 65000 },
-  ];
+  const { data: dbDeals, isLoading: dealsLoading } = trpc.crm.listDeals.useQuery();
+  const { data: dbStages, isLoading: stagesLoading } = trpc.crm.listStages.useQuery();
+  const { data: dbUsers, isLoading: usersLoading } = trpc.crm.listUsers.useQuery();
 
-  const dealsByStage = [
-    { stage: "Prospecção", deals: 45, revenue: 125000 },
-    { stage: "Qualificação", deals: 28, revenue: 95000 },
-    { stage: "Proposta", deals: 18, revenue: 180000 },
-    { stage: "Negociação", deals: 12, revenue: 220000 },
-    { stage: "Fechado", deals: 8, revenue: 350000 },
-  ];
+  const isLoading = dealsLoading || stagesLoading || usersLoading;
 
-  const dealsByOwner = [
-    { owner: "Fernando Silva", deals: 24, revenue: 450000 },
-    { owner: "Ana Costa", deals: 18, revenue: 380000 },
-    { owner: "Pedro Ferreira", deals: 15, revenue: 320000 },
-    { owner: "Maria Santos", deals: 12, revenue: 280000 },
-  ];
+  // Processar dados reais
+  const {
+    revenueData,
+    dealsByStage,
+    dealsByOwner,
+    conversionData,
+    totalRevenue,
+    wonRevenue,
+    prevMonthRevenue,
+    prevMonthWonRevenue
+  } = useMemo(() => {
+    if (!dbDeals || !dbStages || !dbUsers) {
+      return {
+        revenueData: [],
+        dealsByStage: [],
+        dealsByOwner: [],
+        conversionData: [],
+        totalRevenue: 0,
+        wonRevenue: 0,
+        prevMonthRevenue: 0,
+        prevMonthWonRevenue: 0
+      };
+    }
 
-  const conversionData = [
-    { name: "Prospecção → Qualificação", value: 62 },
-    { name: "Qualificação → Proposta", value: 64 },
-    { name: "Proposta → Negociação", value: 67 },
-    { name: "Negociação → Fechado", value: 67 },
-  ];
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-  const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
+    // 1. Receita por Mês (últimos 6 meses)
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const last6Months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date();
+      d.setMonth(now.getMonth() - (5 - i));
+      return { 
+        month: monthNames[d.getMonth()], 
+        revenue: 0, 
+        target: 50000, // Meta fixa por enquanto
+        monthIdx: d.getMonth(),
+        year: d.getFullYear()
+      };
+    });
+
+    dbDeals.forEach(deal => {
+      const dealDate = new Date(deal.createdAt);
+      const val = parseFloat(deal.value) || 0;
+      
+      const monthIdx = dealDate.getMonth();
+      const year = dealDate.getFullYear();
+      
+      const chartMonth = last6Months.find(m => m.monthIdx === monthIdx && m.year === year);
+      if (chartMonth) {
+        chartMonth.revenue += val;
+      }
+    });
+
+    // 2. Deals por Estágio
+    const stageMap = dbStages.reduce((acc, stage) => {
+      acc[stage.id] = { stage: stage.name, deals: 0, revenue: 0 };
+      return acc;
+    }, {} as Record<number, any>);
+
+    dbDeals.forEach(deal => {
+      const val = parseFloat(deal.value) || 0;
+      if (stageMap[deal.stageId]) {
+        stageMap[deal.stageId].deals += 1;
+        stageMap[deal.stageId].revenue += val;
+      }
+    });
+    const dealsByStage = Object.values(stageMap);
+
+    // 3. Deals por Vendedor
+    const userMap = dbUsers.reduce((acc, user) => {
+      acc[user.id] = { owner: user.name || user.email || `User ${user.id}`, deals: 0, revenue: 0 };
+      return acc;
+    }, {} as Record<number, any>);
+
+    dbDeals.forEach(deal => {
+      const val = parseFloat(deal.value) || 0;
+      const ownerId = deal.ownerId || 1; // Default fallback
+      if (userMap[ownerId]) {
+        userMap[ownerId].deals += 1;
+        userMap[ownerId].revenue += val;
+      }
+    });
+    const dealsByOwner = Object.values(userMap);
+
+    // 4. Funil de Conversão (Simplificado pela distribuição atual)
+    const totalDeals = dbDeals.length || 1;
+    const sortedStages = [...dbStages].sort((a, b) => a.order - b.order);
+    const conversionData = [];
+    for (let i = 0; i < sortedStages.length - 1; i++) {
+      const currentStage = stageMap[sortedStages[i].id]?.deals || 0;
+      const nextStage = stageMap[sortedStages[i+1].id]?.deals || 0;
+      const rate = currentStage > 0 ? Math.round((nextStage / currentStage) * 100) : 0;
+      conversionData.push({
+        name: `${sortedStages[i].name} → ${sortedStages[i+1].name}`,
+        value: Math.min(rate, 100)
+      });
+    }
+
+    // KPI Calculations
+    let totalRevenue = 0;
+    let wonRevenue = 0;
+    let prevMonthRevenue = 0;
+    let prevMonthWonRevenue = 0;
+
+    const lastMonthDate = new Date();
+    lastMonthDate.setMonth(now.getMonth() - 1);
+
+    dbDeals.forEach(deal => {
+      const val = parseFloat(deal.value) || 0;
+      const dealDate = new Date(deal.createdAt);
+      const isWon = deal.status === "won" || deal.stageId === sortedStages[sortedStages.length - 1].id; // Se for o último estágio
+
+      totalRevenue += val;
+      if (isWon) wonRevenue += val;
+
+      if (dealDate.getMonth() === lastMonthDate.getMonth() && dealDate.getFullYear() === lastMonthDate.getFullYear()) {
+        prevMonthRevenue += val;
+        if (isWon) prevMonthWonRevenue += val;
+      }
+    });
+
+    return {
+      revenueData: last6Months,
+      dealsByStage,
+      dealsByOwner,
+      conversionData: conversionData.length > 0 ? conversionData : [
+        { name: "Prospecção → Qualificação", value: 0 },
+        { name: "Qualificação → Proposta", value: 0 },
+        { name: "Proposta → Negociação", value: 0 },
+        { name: "Negociação → Fechado", value: 0 },
+      ],
+      totalRevenue,
+      wonRevenue,
+      prevMonthRevenue,
+      prevMonthWonRevenue
+    };
+  }, [dbDeals, dbStages, dbUsers]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="animate-spin text-blue-600" size={48} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -44,7 +166,7 @@ export default function Reports() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Relatórios e BI</h2>
-          <p className="text-gray-500 mt-1">Análise de vendas e desempenho</p>
+          <p className="text-gray-500 mt-1">Análise de vendas e desempenho em tempo real</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="flex items-center gap-2">
@@ -62,14 +184,18 @@ export default function Reports() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-gray-600">Faturamento Financeiro</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Total em Pipeline (Oportunidades)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-gray-900">R$ 14.997</span>
-              <span className="text-sm text-green-600 font-medium">+12.5%</span>
+              <span className="text-4xl font-bold text-gray-900">R$ {totalRevenue.toLocaleString()}</span>
+              {prevMonthRevenue > 0 && (
+                <span className={`text-sm font-medium ${totalRevenue >= prevMonthRevenue ? "text-green-600" : "text-red-600"}`}>
+                  {totalRevenue >= prevMonthRevenue ? "+" : ""}{((totalRevenue / prevMonthRevenue - 1) * 100).toFixed(1)}%
+                </span>
+              )}
             </div>
-            <p className="text-xs text-gray-500 mt-2">Mês anterior: R$ 13.300</p>
+            <p className="text-xs text-gray-500 mt-2">Mês anterior: R$ {prevMonthRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
 
@@ -79,10 +205,14 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold text-gray-900">R$ 502.934</span>
-              <span className="text-sm text-green-600 font-medium">+8.3%</span>
+              <span className="text-4xl font-bold text-gray-900">R$ {wonRevenue.toLocaleString()}</span>
+              {prevMonthWonRevenue > 0 && (
+                <span className={`text-sm font-medium ${wonRevenue >= prevMonthWonRevenue ? "text-green-600" : "text-red-600"}`}>
+                  {wonRevenue >= prevMonthWonRevenue ? "+" : ""}{((wonRevenue / prevMonthWonRevenue - 1) * 100).toFixed(1)}%
+                </span>
+              )}
             </div>
-            <p className="text-xs text-gray-500 mt-2">Mês anterior: R$ 464.500</p>
+            <p className="text-xs text-gray-500 mt-2">Mês anterior: R$ {prevMonthWonRevenue.toLocaleString()}</p>
           </CardContent>
         </Card>
       </div>
@@ -101,9 +231,9 @@ export default function Reports() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
-                <Tooltip formatter={(value) => `R$ ${value.toLocaleString()}`} />
+                <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString()}`} />
                 <Legend />
-                <Line type="monotone" dataKey="revenue" stroke="#3b82f6" name="Receita Real" />
+                <Line type="monotone" dataKey="revenue" stroke="#3b82f6" name="Receita Real" strokeWidth={2} />
                 <Line type="monotone" dataKey="target" stroke="#10b981" name="Meta" strokeDasharray="5 5" />
               </LineChart>
             </ResponsiveContainer>
@@ -113,8 +243,8 @@ export default function Reports() {
         {/* Deals by Stage */}
         <Card>
           <CardHeader>
-            <CardTitle>Status de negócios por vendedor</CardTitle>
-            <CardDescription>Distribuição de deals por estágio</CardDescription>
+            <CardTitle>Distribuição por Estágio</CardTitle>
+            <CardDescription>Quantidade de negócios em cada etapa</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -132,8 +262,8 @@ export default function Reports() {
         {/* Deals by Owner */}
         <Card>
           <CardHeader>
-            <CardTitle>Desempenho de negócios por vendedor</CardTitle>
-            <CardDescription>Receita gerada por cada vendedor</CardDescription>
+            <CardTitle>Desempenho por Vendedor</CardTitle>
+            <CardDescription>Receita em pipeline por cada vendedor</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -141,7 +271,7 @@ export default function Reports() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis type="number" />
                 <YAxis dataKey="owner" type="category" width={120} />
-                <Tooltip formatter={(value) => `R$ ${value.toLocaleString()}`} />
+                <Tooltip formatter={(value: number) => `R$ ${value.toLocaleString()}`} />
                 <Bar dataKey="revenue" fill="#10b981" name="Receita" />
               </BarChart>
             </ResponsiveContainer>
@@ -151,8 +281,8 @@ export default function Reports() {
         {/* Conversion Funnel */}
         <Card>
           <CardHeader>
-            <CardTitle>Previsão do faturamento por mês</CardTitle>
-            <CardDescription>Taxa de conversão por estágio</CardDescription>
+            <CardTitle>Taxas de Conversão do Funil</CardTitle>
+            <CardDescription>Percentual de avanço entre estágios</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -170,6 +300,9 @@ export default function Reports() {
                   </div>
                 </div>
               ))}
+              {conversionData.length === 0 && (
+                <p className="text-sm text-gray-500 text-center py-4">Sem dados de conversão suficientes</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -190,7 +323,6 @@ export default function Reports() {
                   <th className="text-right py-3 px-4 font-semibold text-gray-700">Deals</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-700">Receita</th>
                   <th className="text-right py-3 px-4 font-semibold text-gray-700">Ticket Médio</th>
-                  <th className="text-right py-3 px-4 font-semibold text-gray-700">Taxa Conversão</th>
                 </tr>
               </thead>
               <tbody>
@@ -199,18 +331,18 @@ export default function Reports() {
                     <td className="py-3 px-4 font-medium text-gray-900">{owner.owner}</td>
                     <td className="py-3 px-4 text-right text-gray-600">{owner.deals}</td>
                     <td className="py-3 px-4 text-right font-semibold text-gray-900">
-                      R$ {(owner.revenue / 1000).toFixed(0)}k
+                      R$ {owner.revenue.toLocaleString()}
                     </td>
                     <td className="py-3 px-4 text-right text-gray-600">
-                      R$ {(owner.revenue / owner.deals / 1000).toFixed(1)}k
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                        {Math.round((owner.deals / 50) * 100)}%
-                      </span>
+                      R$ {owner.deals > 0 ? (owner.revenue / owner.deals).toLocaleString() : "0"}
                     </td>
                   </tr>
                 ))}
+                {dealsByOwner.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-gray-500">Nenhum dado disponível</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -219,3 +351,4 @@ export default function Reports() {
     </div>
   );
 }
+
