@@ -634,6 +634,29 @@ export const crmRouter = router({
       return analysis;
     }),
 
+  updateDeal: publicProcedure
+    .input(z.object({
+      id: z.number(),
+      title: z.string().optional(),
+      value: z.string().optional(),
+      probability: z.number().optional(),
+      expectedCloseDate: z.string().optional(),
+      source: z.string().optional(),
+      description: z.string().optional(),
+      status: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (!ctx.user) throw new Error("Unauthorized");
+      const { id, ...data } = input;
+      const result = await db.getDb().then(d => 
+        d.update(schema.deals)
+          .set(data)
+          .where(eq(schema.deals.id, id))
+          .returning()
+      );
+      return result[0];
+    }),
+
   getDeal: publicProcedure
     .input(z.number())
     .query(async ({ input }) => {
