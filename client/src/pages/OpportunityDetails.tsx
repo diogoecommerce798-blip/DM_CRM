@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRoute, useLocation } from "wouter";
 import { 
   ChevronLeft, 
@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
   Edit2,
   Trash2,
+  Check,
   CheckCircle2,
   Loader2,
   AlertCircle,
@@ -50,7 +51,6 @@ import {
 } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import OpportunityPhotos from "@/components/OpportunityPhotos";
-import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
