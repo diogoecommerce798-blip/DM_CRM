@@ -224,16 +224,34 @@ export const interactions = pgTable("interactions", {
   id: serial("id").primaryKey(),
   userId: integer("userId").notNull(),
   contactId: integer("contactId"),
-  dealId: integer("dealId"),
-  type: varchar("type", { length: 50 }).notNull(),
+  dealId: integer("dealId").references(() => deals.id, { onDelete: "cascade" }),
+  type: varchar("type", { length: 50 }).notNull(), // meeting, call, email, whatsapp, task
   subject: varchar("subject", { length: 255 }),
   description: text("description"),
-  duration: integer("duration"),
+  duration: integer("duration"), // in minutes
+  priority: varchar("priority", { length: 20 }).default("medium"),
+  status: varchar("status", { length: 20 }).default("pending"), // pending, completed, cancelled
+  dueDate: timestamp("due_date"),
+  location: text("location"),
+  participants: text("participants"), // JSON or comma-separated names
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
 export type Interaction = typeof interactions.$inferSelect;
 export type InsertInteraction = typeof interactions.$inferInsert;
+
+export const whatsappMessages = pgTable("whatsapp_messages", {
+  id: serial("id").primaryKey(),
+  dealId: integer("deal_id").references(() => deals.id, { onDelete: "cascade" }).notNull(),
+  contactId: integer("contact_id").references(() => contacts.id, { onDelete: "cascade" }),
+  message: text("message").notNull(),
+  direction: varchar("direction", { length: 10 }).notNull(), // in, out
+  status: varchar("status", { length: 20 }).default("sent"), // sent, delivered, read, error
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export type WhatsappMessage = typeof whatsappMessages.$inferSelect;
+export type InsertWhatsappMessage = typeof whatsappMessages.$inferInsert;
 
 // 4. MARKETING & CAMPAIGNS
 export const campaigns = pgTable("campaigns", {
@@ -317,6 +335,7 @@ export type InsertReport = typeof reports.$inferInsert;
 export const notes = pgTable("notes", {
   id: serial("id").primaryKey(),
   userId: integer("userId").notNull(),
+  dealId: integer("dealId").references(() => deals.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
   content: text("content"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -328,6 +347,16 @@ export const notes = pgTable("notes", {
 
 export type Note = typeof notes.$inferSelect;
 export type InsertNote = typeof notes.$inferInsert;
+
+export const aiSummaries = pgTable("ai_summaries", {
+  id: serial("id").primaryKey(),
+  dealId: integer("deal_id").references(() => deals.id, { onDelete: "cascade" }).notNull(),
+  summary: text("summary").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AiSummary = typeof aiSummaries.$inferSelect;
+export type InsertAiSummary = typeof aiSummaries.$inferInsert;
 
 // 8. PERMISSIONS & ROLES
 export const roles = pgTable("roles", {
@@ -363,9 +392,13 @@ export type InsertCustomField = typeof customFields.$inferInsert;
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
-  code: varchar("code", { length: 100 }).notNull().unique(),
+  code: varchar("code", { length: 100 }).notNull().unique(), // SKU
   price: varchar("price", { length: 50 }).notNull(),
   category: varchar("category", { length: 100 }),
+  stock: integer("stock").default(0),
+  unit: varchar("unit", { length: 20 }).default("un"), // un, pc, kg, etc.
+  blingId: varchar("bling_id", { length: 50 }), // ID from Bling ERP
+  description: text("description"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt")
     .defaultNow()

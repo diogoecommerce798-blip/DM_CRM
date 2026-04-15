@@ -569,15 +569,15 @@ export const crmRouter = router({
       const db_conn = await db.getDb();
       
       const activities = await db_conn.select().from(schema.interactions).where(eq(schema.interactions.dealId, input));
-      const notes = await db_conn.select().from(schema.notes).where(eq(schema.notes.dealId, input));
+      const dealNotes = await db_conn.select().from(schema.notes).where(eq(schema.notes.dealId, input));
       const photos = await db_conn.select().from(schema.opportunityPhotos).where(eq(schema.opportunityPhotos.opportunityId, input));
       const whatsapp = await db_conn.select().from(schema.whatsappMessages).where(eq(schema.whatsappMessages.dealId, input));
 
       const timeline = [
-        ...activities.map(a => ({ type: 'activity', date: a.createdAt, data: a })),
-        ...notes.map(n => ({ type: 'note', date: n.createdAt, data: n })),
-        ...photos.map(p => ({ type: 'photo', date: p.uploadedAt, data: p })),
-        ...whatsapp.map(w => ({ type: 'whatsapp', date: w.timestamp, data: w })),
+        ...activities.map((a: any) => ({ type: 'activity', date: a.createdAt, data: a })),
+        ...dealNotes.map((n: any) => ({ type: 'note', date: n.createdAt, data: n })),
+        ...photos.map((p: any) => ({ type: 'photo', date: p.uploadedAt, data: p })),
+        ...whatsapp.map((w: any) => ({ type: 'whatsapp', date: w.timestamp, data: w })),
       ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
       return timeline;
