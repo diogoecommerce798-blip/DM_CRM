@@ -41,6 +41,13 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import OpportunityPhotos from "@/components/OpportunityPhotos";
 import { useState, useMemo } from "react";
@@ -48,7 +55,99 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
+import { Calendar as CalendarUI } from "@/components/ui/calendar";
+
 // ==================== SUB-COMPONENTS ====================
+
+function SchedulerTab({ dealId }: { dealId: number }) {
+  const { data: timeline } = trpc.crm.getDealTimeline.useQuery(dealId);
+  const [date, setDate] = useState<Date | undefined>(new Date());
+
+  const scheduledActivities = useMemo(() => {
+    return timeline?.filter(item => item.type === 'activity') || [];
+  }, [timeline]);
+
+  const selectedDayActivities = useMemo(() => {
+    if (!date) return [];
+    return scheduledActivities.filter(item => {
+      const itemDate = new Date(item.date);
+      return itemDate.getDate() === date.getDate() &&
+             itemDate.getMonth() === date.getMonth() &&
+             itemDate.getFullYear() === date.getFullYear();
+    });
+  }, [date, scheduledActivities]);
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="lg:col-span-5">
+        <Card className="border-gray-200 shadow-sm overflow-hidden bg-white">
+          <CardHeader className="p-4 border-b border-gray-100">
+            <CardTitle className="text-sm font-bold uppercase text-gray-500">Calendário de Agendamentos</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 flex justify-center">
+            <CalendarUI
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              className="rounded-md border-none"
+              locale={ptBR}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="lg:col-span-7 space-y-4">
+        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+          <Clock size={16} /> Agendamentos para {date ? format(date, "dd 'de' MMMM", { locale: ptBR }) : "Selecionar data"}
+        </h3>
+
+        {selectedDayActivities.length > 0 ? (
+          <div className="space-y-3">
+            {selectedDayActivities.map((item, idx) => (
+              <Card key={idx} className="border-gray-100 shadow-sm hover:border-blue-200 transition-colors">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex flex-col items-center justify-center shrink-0">
+                    <span className="text-xs font-bold">{format(new Date(item.date), "HH:mm")}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-bold text-gray-900 truncate">{item.data.subject}</h4>
+                    <p className="text-xs text-gray-500 truncate">{item.data.description || "Sem descrição"}</p>
+                  </div>
+                  <Badge variant="outline" className="bg-gray-50 text-[10px] uppercase font-bold text-gray-500">
+                    {item.data.type}
+                  </Badge>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="p-10 text-center border-2 border-dashed border-gray-100 rounded-xl bg-white text-gray-400">
+            <Calendar size={32} className="mx-auto mb-3 opacity-20" />
+            <p className="text-sm">Nenhum agendamento para este dia.</p>
+            <Button variant="link" className="text-blue-600 text-xs mt-1">+ Criar nova atividade</Button>
+          </div>
+        )}
+
+        <div className="pt-6 space-y-4">
+          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+            <CheckCircle2 size={16} /> Próximas Tarefas e Atendimentos
+          </h3>
+          <div className="space-y-2">
+            {scheduledActivities.slice(0, 3).map((item, idx) => (
+              <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-gray-800">{item.data.subject}</p>
+                  <p className="text-[10px] text-gray-500">{format(new Date(item.date), "dd/MM 'às' HH:mm")}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function TimelineTab({ dealId }: { dealId: number }) {
   const utils = trpc.useUtils();
@@ -757,6 +856,9 @@ export default function OpportunityDetails() {
             </TabsList>
 
             <div className="mt-6">
+              <TabsContent value="agendador">
+                <SchedulerTab dealId={dealId as number} />
+              </TabsContent>
               <TabsContent value="anotacoes">
                 <TimelineTab dealId={dealId as number} />
               </TabsContent>
@@ -777,7 +879,7 @@ export default function OpportunityDetails() {
               </TabsContent>
               
               {/* Placeholder para abas restantes */}
-              {["agendador", "arquivos", "documentos", "fatura"].map(tab => (
+              {["arquivos", "documentos", "fatura"].map(tab => (
                 <TabsContent key={tab} value={tab}>
                   <div className="p-10 text-center border-2 border-dashed border-gray-100 rounded-xl bg-white text-gray-500">
                     Módulo de {tab.charAt(0).toUpperCase() + tab.slice(1)} em desenvolvimento (Pronto para Bling ERP)
