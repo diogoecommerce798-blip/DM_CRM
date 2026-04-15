@@ -62,6 +62,7 @@ import { Calendar as CalendarUI } from "@/components/ui/calendar";
 function SchedulerTab({ dealId }: { dealId: number }) {
   const { data: timeline } = trpc.crm.getDealTimeline.useQuery(dealId);
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [isAdding, setIsAdding] = useState(false);
 
   const scheduledActivities = useMemo(() => {
     return timeline?.filter(item => item.type === 'activity') || [];
@@ -79,7 +80,7 @@ function SchedulerTab({ dealId }: { dealId: number }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <div className="lg:col-span-5">
+      <div className="lg:col-span-5 space-y-6">
         <Card className="border-gray-200 shadow-sm overflow-hidden bg-white">
           <CardHeader className="p-4 border-b border-gray-100">
             <CardTitle className="text-sm font-bold uppercase text-gray-500">Calendário de Agendamentos</CardTitle>
@@ -94,56 +95,75 @@ function SchedulerTab({ dealId }: { dealId: number }) {
             />
           </CardContent>
         </Card>
+
+        <Button 
+          className="w-full bg-blue-600 hover:bg-blue-700 gap-2" 
+          onClick={() => setIsAdding(true)}
+        >
+          <Plus size={16} /> Novo Agendamento
+        </Button>
       </div>
 
       <div className="lg:col-span-7 space-y-4">
-        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-          <Clock size={16} /> Agendamentos para {date ? format(date, "dd 'de' MMMM", { locale: ptBR }) : "Selecionar data"}
-        </h3>
-
-        {selectedDayActivities.length > 0 ? (
-          <div className="space-y-3">
-            {selectedDayActivities.map((item, idx) => (
-              <Card key={idx} className="border-gray-100 shadow-sm hover:border-blue-200 transition-colors">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex flex-col items-center justify-center shrink-0">
-                    <span className="text-xs font-bold">{format(new Date(item.date), "HH:mm")}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-gray-900 truncate">{item.data.subject}</h4>
-                    <p className="text-xs text-gray-500 truncate">{item.data.description || "Sem descrição"}</p>
-                  </div>
-                  <Badge variant="outline" className="bg-gray-50 text-[10px] uppercase font-bold text-gray-500">
-                    {item.data.type}
-                  </Badge>
-                </CardContent>
-              </Card>
-            ))}
+        {isAdding ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-gray-900 uppercase">Novo Agendamento</h3>
+              <Button variant="ghost" size="icon" onClick={() => setIsAdding(false)}><X size={16} /></Button>
+            </div>
+            <ActivitiesTab dealId={dealId} />
           </div>
         ) : (
-          <div className="p-10 text-center border-2 border-dashed border-gray-100 rounded-xl bg-white text-gray-400">
-            <Calendar size={32} className="mx-auto mb-3 opacity-20" />
-            <p className="text-sm">Nenhum agendamento para este dia.</p>
-            <Button variant="link" className="text-blue-600 text-xs mt-1">+ Criar nova atividade</Button>
-          </div>
-        )}
+          <>
+            <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <Clock size={16} /> Agendamentos para {date ? format(date, "dd 'de' MMMM", { locale: ptBR }) : "Selecionar data"}
+            </h3>
 
-        <div className="pt-6 space-y-4">
-          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-            <CheckCircle2 size={16} /> Próximas Tarefas e Atendimentos
-          </h3>
-          <div className="space-y-2">
-            {scheduledActivities.slice(0, 3).map((item, idx) => (
-              <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                <div className="flex-1">
-                  <p className="text-xs font-bold text-gray-800">{item.data.subject}</p>
-                  <p className="text-[10px] text-gray-500">{format(new Date(item.date), "dd/MM 'às' HH:mm")}</p>
-                </div>
+            {selectedDayActivities.length > 0 ? (
+              <div className="space-y-3">
+                {selectedDayActivities.map((item, idx) => (
+                  <Card key={idx} className="border-gray-100 shadow-sm hover:border-blue-200 transition-colors">
+                    <CardContent className="p-4 flex items-center gap-4">
+                      <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex flex-col items-center justify-center shrink-0">
+                        <span className="text-xs font-bold">{format(new Date(item.date), "HH:mm")}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-sm font-bold text-gray-900 truncate">{item.data.subject}</h4>
+                        <p className="text-xs text-gray-500 truncate">{item.data.description || "Sem descrição"}</p>
+                      </div>
+                      <Badge variant="outline" className="bg-gray-50 text-[10px] uppercase font-bold text-gray-500">
+                        {item.data.type}
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            ) : (
+              <div className="p-10 text-center border-2 border-dashed border-gray-100 rounded-xl bg-white text-gray-400">
+                <Calendar size={32} className="mx-auto mb-3 opacity-20" />
+                <p className="text-sm">Nenhum agendamento para este dia.</p>
+                <Button variant="link" className="text-blue-600 text-xs mt-1" onClick={() => setIsAdding(true)}>+ Criar nova atividade</Button>
+              </div>
+            )}
+
+            <div className="pt-6 space-y-4">
+              <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <CheckCircle2 size={16} /> Próximas Tarefas e Atendimentos
+              </h3>
+              <div className="space-y-2">
+                {scheduledActivities.slice(0, 3).map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-gray-800">{item.data.subject}</p>
+                      <p className="text-[10px] text-gray-500">{format(new Date(item.date), "dd/MM 'às' HH:mm")}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -246,14 +266,37 @@ function ActivitiesTab({ dealId }: { dealId: number }) {
   const utils = trpc.useUtils();
   const [subject, setSubject] = useState("");
   const [type, setType] = useState("Reunião");
+  const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [duration, setDuration] = useState("30");
+  const [location, setLocation] = useState("");
 
   const createActivityMutation = trpc.crm.createActivity.useMutation({
     onSuccess: () => {
       utils.crm.getDealTimeline.invalidate(dealId);
       setSubject("");
+      setDescription("");
+      setDueDate("");
+      setLocation("");
       toast.success("Atividade agendada!");
     },
   });
+
+  const handleSchedule = () => {
+    if (!subject.trim()) {
+      toast.error("O assunto é obrigatório");
+      return;
+    }
+    createActivityMutation.mutate({ 
+      dealId, 
+      type, 
+      subject, 
+      description, 
+      dueDate: dueDate || undefined, 
+      duration: parseInt(duration),
+      location 
+    });
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -287,11 +330,16 @@ function ActivitiesTab({ dealId }: { dealId: number }) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">Data e Hora</label>
-                <Input type="datetime-local" className="border-gray-200 text-sm" />
+                <Input 
+                  type="datetime-local" 
+                  className="border-gray-200 text-sm" 
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">Duração</label>
-                <Select defaultValue="30">
+                <Select value={duration} onValueChange={setDuration}>
                   <SelectTrigger className="border-gray-200 text-sm">
                     <SelectValue placeholder="30 min" />
                   </SelectTrigger>
@@ -299,6 +347,7 @@ function ActivitiesTab({ dealId }: { dealId: number }) {
                     <SelectItem value="15">15 min</SelectItem>
                     <SelectItem value="30">30 min</SelectItem>
                     <SelectItem value="60">1 hora</SelectItem>
+                    <SelectItem value="120">2 horas</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -308,24 +357,40 @@ function ActivitiesTab({ dealId }: { dealId: number }) {
               <label className="text-[10px] font-bold text-gray-400 uppercase">Localização / Link</label>
               <div className="relative">
                 <Video className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                <Input placeholder="Adicionar local ou link de vídeo" className="pl-10 border-gray-200" />
+                <Input 
+                  placeholder="Adicionar local ou link de vídeo" 
+                  className="pl-10 border-gray-200" 
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
               </div>
             </div>
 
-            <Textarea placeholder="Descrição..." className="min-h-[100px] border-gray-200" />
+            <Textarea 
+              placeholder="Descrição..." 
+              className="min-h-[100px] border-gray-200" 
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
 
             <div className="flex items-center gap-2 text-blue-600 text-sm font-medium cursor-pointer hover:underline">
               <UserPlus size={16} /> Adicionar convidados
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" size="sm">Cancelar</Button>
+              <Button variant="outline" size="sm" onClick={() => {
+                setSubject("");
+                setDescription("");
+                setDueDate("");
+                setLocation("");
+              }}>Limpar</Button>
               <Button 
                 size="sm" 
                 className="bg-blue-600 hover:bg-blue-700"
-                onClick={() => createActivityMutation.mutate({ dealId, type, subject })}
+                onClick={handleSchedule}
+                disabled={createActivityMutation.isPending}
               >
-                Agendar
+                {createActivityMutation.isPending ? "Agendando..." : "Agendar"}
               </Button>
             </div>
           </CardContent>
@@ -484,6 +549,26 @@ function CallsTab({ dealId }: { dealId: number }) {
 }
 
 function EmailsTab({ dealId }: { dealId: number }) {
+  const [emailTo, setEmailTo] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailBody, setEmailBody] = useState("");
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSendEmail = () => {
+    if (!emailTo || !emailSubject || !emailBody) {
+      toast.error("Preencha todos os campos do e-mail");
+      return;
+    }
+    setIsSending(true);
+    // Simulação de envio
+    setTimeout(() => {
+      toast.success("E-mail enviado com sucesso!");
+      setEmailSubject("");
+      setEmailBody("");
+      setIsSending(false);
+    }, 1500);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -492,23 +577,122 @@ function EmailsTab({ dealId }: { dealId: number }) {
           <Button variant="ghost" size="sm" className="text-gray-500">Enviados</Button>
           <Button variant="ghost" size="sm" className="text-gray-500">Rascunhos</Button>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700 gap-2">
-          <Plus size={16} /> Escrever e-mail
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="gap-2 border-blue-200 text-blue-700 hover:bg-blue-50">
+            <RefreshCcw size={14} /> Sincronizar Outlook/Gmail
+          </Button>
+        </div>
       </div>
 
       <Card className="border-gray-200 shadow-sm">
-        <CardContent className="p-0">
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-4">
-            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
-              <Mail size={32} />
-            </div>
-            <p className="text-sm font-medium">Nenhum e-mail encontrado</p>
-            <p className="text-xs text-center max-w-xs">Conecte sua conta de e-mail para sincronizar mensagens automaticamente com este negócio.</p>
-            <Button variant="outline" size="sm" className="mt-2">Configurar E-mail</Button>
+        <CardHeader className="p-4 border-b border-gray-100 bg-gray-50/50">
+          <CardTitle className="text-sm font-bold uppercase text-gray-500">Novo E-mail</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 space-y-4">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Para</label>
+            <Input 
+              placeholder="cliente@email.com" 
+              value={emailTo} 
+              onChange={(e) => setEmailTo(e.target.value)}
+              className="border-gray-200"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Assunto</label>
+            <Input 
+              placeholder="Assunto do e-mail" 
+              value={emailSubject} 
+              onChange={(e) => setEmailSubject(e.target.value)}
+              className="border-gray-200"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-400 uppercase">Mensagem</label>
+            <Textarea 
+              placeholder="Escreva sua mensagem aqui..." 
+              className="min-h-[200px] border-gray-200"
+              value={emailBody}
+              onChange={(e) => setEmailBody(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm">Salvar Rascunho</Button>
+            <Button 
+              size="sm" 
+              className="bg-blue-600 hover:bg-blue-700 gap-2"
+              onClick={handleSendEmail}
+              disabled={isSending}
+            >
+              <Send size={16} /> {isSending ? "Enviando..." : "Enviar Agora"}
+            </Button>
           </div>
         </CardContent>
       </Card>
+
+      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex gap-3">
+        <Info className="text-blue-500 shrink-0" size={20} />
+        <p className="text-xs text-blue-800 leading-relaxed">
+          <strong>Dica:</strong> Conecte sua conta do Outlook ou Gmail nas configurações para ver o histórico completo de conversas sincronizado automaticamente com este negócio.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function EditableField({ label, value, onSave, type = "text" }: { label: string, value: string, onSave: (val: string) => void, type?: string }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentValue, setCurrentValue] = useState(value);
+
+  const handleSave = () => {
+    onSave(currentValue);
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div className="space-y-2">
+        <label className="text-[10px] font-bold text-gray-400 uppercase">{label}</label>
+        <div className="flex gap-1">
+          {type === "textarea" ? (
+            <Textarea 
+              value={currentValue} 
+              onChange={(e) => setCurrentValue(e.target.value)}
+              className="text-sm border-blue-200"
+              autoFocus
+            />
+          ) : (
+            <Input 
+              type={type}
+              value={currentValue} 
+              onChange={(e) => setCurrentValue(e.target.value)}
+              className="h-8 text-sm border-blue-200"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            />
+          )}
+          <div className="flex flex-col gap-1">
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600 hover:bg-green-50" onClick={handleSave}>
+              <Check size={14} />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:bg-gray-50" onClick={() => setIsEditing(false)}>
+              <X size={14} />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group relative py-1 cursor-pointer hover:bg-gray-50 rounded px-1 -mx-1 transition-colors" onClick={() => setIsEditing(true)}>
+      <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center justify-between">
+        {label}
+        <Edit2 size={10} className="opacity-0 group-hover:opacity-100 text-blue-500" />
+      </label>
+      <p className={`text-sm font-medium text-gray-900 mt-0.5 ${!value ? 'italic text-gray-400' : ''}`}>
+        {value || "Clique para adicionar..."}
+      </p>
     </div>
   );
 }
@@ -518,9 +702,47 @@ function ProductSection({ dealId }: { dealId: number }) {
   const { data: allPhotos } = trpc.crm.listOpportunityPhotos.useQuery({ opportunityId: dealId });
   const utils = trpc.useUtils();
 
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [newProductName, setNewProductName] = useState("");
+  const [newProductPrice, setNewProductNamePrice] = useState("");
+  const [newProductCode, setNewProductCode] = useState("");
+
   const syncBlingMutation = trpc.crm.syncWithBling.useMutation({
     onSuccess: (data) => toast.success(data.message),
   });
+
+  const createProductMutation = trpc.crm.createProduct.useMutation({
+    onSuccess: async (newProduct) => {
+      await addDealProductMutation.mutateAsync({
+        dealId,
+        productId: newProduct.id,
+        quantity: 1
+      });
+      setIsAddingProduct(false);
+      setNewProductName("");
+      setNewProductNamePrice("");
+      setNewProductCode("");
+      toast.success("Produto cadastrado e vinculado!");
+    }
+  });
+
+  const addDealProductMutation = trpc.crm.addDealProduct.useMutation({
+    onSuccess: () => {
+      utils.crm.listDealProducts.invalidate(dealId);
+    }
+  });
+
+  const handleCreateProduct = () => {
+    if (!newProductName || !newProductPrice || !newProductCode) {
+      toast.error("Preencha todos os campos do produto");
+      return;
+    }
+    createProductMutation.mutate({
+      name: newProductName,
+      price: parseFloat(newProductPrice),
+      code: newProductCode
+    });
+  };
 
   if (productsLoading) return <Loader2 className="animate-spin h-4 w-4 mx-auto my-4" />;
 
@@ -533,7 +755,9 @@ function ProductSection({ dealId }: { dealId: number }) {
             <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400"><Plus size={14} /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem className="gap-2"><Plus size={14} /> Cadastrar novo produto</DropdownMenuItem>
+            <DropdownMenuItem className="gap-2" onClick={() => setIsAddingProduct(true)}>
+              <Plus size={14} /> Cadastrar novo produto
+            </DropdownMenuItem>
             <DropdownMenuItem className="gap-2" onClick={() => syncBlingMutation.mutate({ entity: 'products' })}>
               <History size={14} /> Sincronizar com Bling
             </DropdownMenuItem>
@@ -541,6 +765,37 @@ function ProductSection({ dealId }: { dealId: number }) {
         </DropdownMenu>
       </CardHeader>
       <CardContent className="p-4 space-y-4">
+        {isAddingProduct && (
+          <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 space-y-3 mb-4">
+            <p className="text-[10px] font-bold text-blue-700 uppercase">Novo Produto</p>
+            <Input 
+              placeholder="Nome do produto" 
+              value={newProductName} 
+              onChange={(e) => setNewProductName(e.target.value)}
+              className="h-8 text-xs bg-white"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <Input 
+                placeholder="SKU / Código" 
+                value={newProductCode} 
+                onChange={(e) => setNewProductCode(e.target.value)}
+                className="h-8 text-xs bg-white"
+              />
+              <Input 
+                placeholder="Preço (R$)" 
+                type="number"
+                value={newProductPrice} 
+                onChange={(e) => setNewProductNamePrice(e.target.value)}
+                className="h-8 text-xs bg-white"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setIsAddingProduct(false)}>Cancelar</Button>
+              <Button size="sm" className="h-7 text-[10px] bg-blue-600" onClick={handleCreateProduct}>Salvar e Vincular</Button>
+            </div>
+          </div>
+        )}
+
         {products && products.length > 0 ? (
           products.map((product: any) => {
             const productPhotos = allPhotos?.filter(p => p.productId === product.id).slice(0, 4);
@@ -588,7 +843,7 @@ function ProductSection({ dealId }: { dealId: number }) {
           <div className="text-center py-6">
             <Package className="w-8 h-8 text-gray-200 mx-auto mb-2" />
             <p className="text-[10px] text-gray-400 italic">Nenhum produto vinculado ao negócio</p>
-            <Button variant="link" className="text-xs text-blue-600 h-auto p-0 mt-2 font-bold">+ Vincular produto</Button>
+            <Button variant="link" className="text-xs text-blue-600 h-auto p-0 mt-2 font-bold" onClick={() => setIsAddingProduct(true)}>+ Vincular produto</Button>
           </div>
         )}
         <div className="pt-2 border-t border-gray-100 flex flex-col gap-2">
@@ -626,6 +881,13 @@ export default function OpportunityDetails() {
     onSuccess: () => {
       utils.crm.getAiSummary.invalidate(dealId as number);
       toast.success("Resumo gerado com IA!");
+    },
+  });
+
+  const updateDealMutation = trpc.crm.updateDeal.useMutation({
+    onSuccess: () => {
+      utils.crm.getDeal.invalidate(dealId as number);
+      toast.success("Negócio atualizado!");
     },
   });
 
@@ -738,26 +1000,21 @@ export default function OpportunityDetails() {
               <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400"><Edit2 size={14} /></Button>
             </CardHeader>
             <CardContent className="p-4 space-y-5">
-              <div className="group relative">
-                <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center justify-between">
-                  Valor Total
-                  <Edit2 size={10} className="opacity-0 group-hover:opacity-100 cursor-pointer text-blue-500" />
-                </label>
-                <p className="text-lg font-bold text-gray-900 mt-1">R$ {parseFloat(deal.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-              </div>
+              <EditableField 
+                label="Valor Total" 
+                value={`R$ ${parseFloat(deal.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`} 
+                onSave={(val) => {
+                  const numericVal = val.replace(/\D/g, "");
+                  updateDealMutation.mutate({ id: deal.id, value: numericVal });
+                }} 
+              />
 
-              <div className="group relative">
-                <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center justify-between">
-                  Probabilidade
-                  <Edit2 size={10} className="opacity-0 group-hover:opacity-100 cursor-pointer text-blue-500" />
-                </label>
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="flex-1 bg-gray-100 h-2 rounded-full overflow-hidden">
-                    <div className="bg-blue-500 h-full rounded-full transition-all" style={{ width: `${deal.probability}%` }}></div>
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">{deal.probability}%</span>
-                </div>
-              </div>
+              <EditableField 
+                label="Probabilidade (%)" 
+                value={`${deal.probability}%`} 
+                type="number"
+                onSave={(val) => updateDealMutation.mutate({ id: deal.id, probability: parseInt(val) })} 
+              />
 
               <div className="group relative">
                 <label className="text-[10px] font-bold text-gray-400 uppercase">Valor Esperado</label>
@@ -765,31 +1022,26 @@ export default function OpportunityDetails() {
                 <p className="text-[9px] text-gray-400 mt-0.5">Calculado: Valor × Probabilidade</p>
               </div>
 
-              <div className="group relative border-t border-gray-50 pt-4">
-                <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center justify-between">
-                  Fechamento Esperado
-                  <Edit2 size={10} className="opacity-0 group-hover:opacity-100 cursor-pointer text-blue-500" />
-                </label>
-                <p className="text-sm text-gray-700 mt-1 font-medium">
-                  {deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString('pt-BR') : "-"}
-                </p>
-              </div>
+              <EditableField 
+                label="Fechamento Esperado" 
+                value={deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString('pt-BR') : ""} 
+                type="date"
+                onSave={(val) => updateDealMutation.mutate({ id: deal.id, expectedCloseDate: val })} 
+              />
 
               <div className="group relative">
-                <label className="text-[10px] font-bold text-gray-400 uppercase flex items-center justify-between">
-                  Responsável
-                  <Edit2 size={10} className="opacity-0 group-hover:opacity-100 cursor-pointer text-blue-500" />
-                </label>
+                <label className="text-[10px] font-bold text-gray-400 uppercase">Responsável</label>
                 <div className="flex items-center gap-2 mt-2">
                   <div className="w-6 h-6 bg-slate-200 rounded-full flex items-center justify-center text-[10px] font-bold">DM</div>
                   <span className="text-sm text-gray-700">Diogo Martins</span>
                 </div>
               </div>
 
-              <div className="group relative">
-                <label className="text-[10px] font-bold text-gray-400 uppercase">Origem</label>
-                <p className="text-sm text-gray-700 mt-1">{deal.source || "-"}</p>
-              </div>
+              <EditableField 
+                label="Origem" 
+                value={deal.source || ""} 
+                onSave={(val) => updateDealMutation.mutate({ id: deal.id, source: val })} 
+              />
             </CardContent>
           </Card>
 
